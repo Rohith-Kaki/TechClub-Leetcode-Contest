@@ -164,36 +164,29 @@ app.post('/api/progress/finish', async (req, res) => {
     const { user_id, problem_id, solved = true } = req.body;
 
     if (!user_id || !problem_id) {
-      return res.status(400).json({ ok: false, error: 'user_id and problem_id are required' });
+      return res
+        .status(400)
+        .json({ ok: false, error: "user_id and problem_id are required" });
     }
 
     const end_ts = nowISO();
 
-    // 1. Fetch existing progress to get start_ts, solved, flag info
+    // 1. Fetch existing progress
     const { data: existing, error: selError } = await supabase
-      .from('user_progress')
-      .select('id, start_ts, solved, flagged, flagged_at, end_ts, duration_seconds')
-      .eq('user_id', user_id)
-      .eq('problem_id', problem_id)
+      .from("user_progress")
+      .select("id, user_id, problem_id, start_ts, solved, flagged, flagged_at, end_ts, duration_seconds")
+      .eq("user_id", user_id)
+      .eq("problem_id", problem_id)
       .maybeSingle();
 
     if (selError) {
-      console.error('select existing progress error:', selError);
-      return res.status(500).json({ ok: false, error: 'Failed to fetch progress' });
+      console.error("select existing progress error:", selError);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Failed to fetch progress" });
     }
 
-    // ❗ If already solved earlier, do NOT change anything
-    if (existing && existing.solved) {
-      return res.json({
-        ok: true,
-        progress: existing,
-        note: 'already_solved_no_change'
-      });
-    }
-
-    const original_start_ts = existing?.start_ts ?? null;
-
-    // 2. Calculate duration only if start_ts exists
+    // Helper to compute duration
     const calcDuration = (start, end) => {
       if (!start || !end) return null;
       return Math.max(
@@ -202,93 +195,174 @@ app.post('/api/progress/finish', async (req, res) => {
       );
     };
 
-    const duration_seconds = calcDuration(original_start_ts, end_ts);
+    // CASE 1: No existing row at all → user never hit /start
+    if (!existing) {
+      const duration_seconds = null;
+      const flagged = true;
+      const flagged_at = end_ts;
+      const flagReason = "Solved without starting (missing start_ts)";
 
-    // 3. Determine if this attempt should be flagged
-    let flagged = existing?.flagged || false;
-    let flagged_at = existing?.flagged_at || null;
-
-    if (duration_seconds !== null && duration_seconds < THRESHOLD_SECONDS && !flagged) {
-      flagged = true;
-      flagged_at = end_ts; // first time we flag
-    }
-
-    // 4. UPSERT into user_progress (insert if no row yet, update if exists & not solved yet)
-    const { data: upsertData, error: upsertError } = await supabase
-      .from('user_progress')
-      .upsert(
-        [
+      // Insert new row
+      const { data: inserted, error: insError } = await supabase
+        .from("user_progress")
+        .insert([
           {
             user_id,
             problem_id,
-
-            start_ts: original_start_ts,  // do NOT overwrite
+            start_ts: null,
             end_ts,
             duration_seconds,
-            solved,                       // first time solve
+            solved,
             solved_at: solved ? end_ts : null,
-
             flagged,
             flagged_at,
+            created_at: nowISO(),
+            updated_at: nowISO(),
+          },
+        ])
+        .select()
+        .single();
 
-            updated_at: nowISO()
-          }
-        ],
-        {
-          onConflict: 'user_id, problem_id',
-          ignoreDuplicates: false
-        }
-      )
-      .select()
-      .single();
+      if (insError) {
+        console.error("insert user_progress error:", insError);
+        return res
+          .status(500)
+          .json({ ok: false, error: "Failed to create progress" });
+      }
 
-    if (upsertError) {
-      console.error('upsert user_progress error:', upsertError);
-      return res.status(500).json({ ok: false, error: 'Failed to update progress' });
-    }
-
-    // 5. If flagged, upsert into flagged_problems (to avoid unique violation)
-    if (flagged) {
-      const reason = duration_seconds !== null
-        ? `duration ${duration_seconds}s < threshold ${THRESHOLD_SECONDS}s`
-        : 'flagged without duration (missing start_ts)';
-
-      const { error: flagUpsertError } = await supabase
-        .from('flagged_problems')
+      // Insert into flagged_problems
+      const { error: flagInsertError } = await supabase
+        .from("flagged_problems")
         .upsert(
           [
             {
               user_id,
               problem_id,
-              reason,
-              flagged_at: flagged_at || end_ts
-            }
+              reason: flagReason,
+              flagged_at,
+            },
           ],
-          {
-            onConflict: 'user_id, problem_id',
-            ignoreDuplicates: false
-          }
+          { onConflict: "user_id, problem_id" }
+        );
+
+      if (flagInsertError) {
+        console.error("flagged_problems insert error:", flagInsertError);
+      }
+
+      return res.json({
+        ok: true,
+        progress: inserted,
+        note: "inserted_no_start_ts_flagged",
+        flagged: true,
+        duration_seconds: null,
+      });
+    }
+
+    // CASE 2: Row exists and already solved → do nothing
+    if (existing.solved) {
+      return res.json({
+        ok: true,
+        progress: existing,
+        note: "already_solved_no_change",
+      });
+    }
+
+    // CASE 3: Row exists, not solved yet → normal solve flow
+    const original_start_ts = existing.start_ts ?? null;
+    const duration_seconds = calcDuration(original_start_ts, end_ts);
+
+    let flagged = existing.flagged || false;
+    let flagged_at = existing.flagged_at || null;
+    let flagReason = null;
+
+    if (!original_start_ts) {
+      // Should not normally happen if /start was used, but handle anyway
+      flagged = true;
+      flagged_at = end_ts;
+      flagReason = "Solved without starting (missing start_ts in existing row)";
+    } else if (
+      duration_seconds !== null &&
+      duration_seconds < THRESHOLD_SECONDS &&
+      !flagged
+    ) {
+      flagged = true;
+      flagged_at = end_ts;
+      flagReason = `duration ${duration_seconds}s < threshold ${THRESHOLD_SECONDS}s`;
+    }
+
+    // Update existing row
+    const { data: updated, error: updError } = await supabase
+      .from("user_progress")
+      .update({
+        end_ts,
+        duration_seconds,
+        solved,
+        solved_at: solved ? end_ts : null,
+        flagged,
+        flagged_at,
+        updated_at: nowISO(),
+      })
+      .eq("id", existing.id)
+      .select()
+      .single();
+
+    if (updError) {
+      console.error("update user_progress error:", updError);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Failed to update progress" });
+    }
+
+    if (flagged && flagReason) {
+      const { error: flagUpsertError } = await supabase
+        .from("flagged_problems")
+        .upsert(
+          [
+            {
+              user_id,
+              problem_id,
+              reason: flagReason,
+              flagged_at: flagged_at || end_ts,
+            },
+          ],
+          { onConflict: "user_id, problem_id" }
         );
 
       if (flagUpsertError) {
-        console.error('upsert flagged_problems error:', flagUpsertError);
-        // don’t fail the whole request; just log it
+        console.error("flagged_problems upsert error:", flagUpsertError);
       }
     }
 
     return res.json({
       ok: true,
-      progress: upsertData,
-      note: existing ? 'updated_first_solve' : 'inserted_first_solve',
+      progress: updated,
+      note: "updated_first_solve",
       flagged,
-      duration_seconds
+      duration_seconds,
     });
-
   } catch (err) {
-    console.error('progress/finish exception:', err);
-    res.status(500).json({ ok: false, error: 'Server error' });
+    console.error("progress/finish exception:", err);
+    res.status(500).json({ ok: false, error: "Server error" });
   }
 });
 
 
+
+app.get('/api/leaderboard', async (req, res) => {
+    try{
+      const {data, error} = await supabase.rpc("get_leaderboard");
+
+      if(error){
+        console.error('leaderboard query error', error);
+        return res.status(500).json({ok: false, error: 'Failed to fetch leaderboard data '});
+      }
+
+      res.json({ok:true, leaderboard:data })
+    } catch (err) {
+    console.error('Query for leaderboard exception:', err);
+    res.status(500).json({ ok: false, error: 'Database error' });
+  }
+});
+
+  
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
