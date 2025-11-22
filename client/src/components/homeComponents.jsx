@@ -115,7 +115,7 @@ export function HeroSection() {
                    bg-[#1D1E20] text-white
                    hover:bg-white hover:text-black transition-colors duration-200"
           >
-            <span className="relative z-10">Register Now - ₹199</span>
+            <span className="relative z-10 font-roboto font-bold text-lg">Register Now - <span className="font-roboto font-bold text-lg">₹199</span></span>
           </button>
 
           {/* SECONDARY BUTTON: White Filled -> Transparent/Outline (Hover) */}
