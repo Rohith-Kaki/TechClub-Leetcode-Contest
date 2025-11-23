@@ -1,9 +1,7 @@
-// src/pages/Rules.jsx
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export function Rules() {
-  const navigate = useNavigate();
+
 
   const contestName = "";
 
@@ -64,12 +62,12 @@ export function Rules() {
     <div className="min-h-screen bg-black text-white">
       {/* TOP-LEFT BACK BUTTON */}
       <div className="px-4 pt-4">
-        <button
-          onClick={() => navigate("/")}
-          className="px-4 py-2 rounded-2xl bg-black border-[#673de6] text-slate-200 font-dm-sans hover:bg-[#673de6]"
+        <Link
+          to="/"
+          className="px-4 py-2 rounded-2xl bg-black border-[#673de6] text-white text-lg font-dm-sans font-extrabold hover:bg-[#673de6]"
         >
           ← Home
-        </button>
+        </Link>
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-10">

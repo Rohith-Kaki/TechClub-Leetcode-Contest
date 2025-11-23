@@ -1,5 +1,5 @@
-// src/components/homeComponents.jsx
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import clublogo from "../assets/Club_logo_white.png";
 import backdrop from "../assets/backdrop.png";
 import arrow from "../assets/arrow.svg";
@@ -119,13 +119,14 @@ export function HeroSection() {
           </button>
 
           {/* SECONDARY BUTTON: White Filled -> Transparent/Outline (Hover) */}
-          <button
+          <Link
+          to = "/rules"
             className="btn-hover px-6 py-3 rounded-xl font-bold text-sm md:text-base 
                    bg-[#1D1E20] text-white
                    hover:bg-white hover:text-black transition-colors duration-200"
           >
             <span className="relative z-10">Rules</span>
-          </button>
+          </Link>
         </div>
       </div>
     </div>

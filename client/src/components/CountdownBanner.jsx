@@ -1,10 +1,5 @@
-// src/components/CountdownBanner.jsx
 import { useEffect, useMemo, useState } from "react";
 
-/**
- * Full-bleed pink banner that matches user requirements:
- * Text and timer grouped, timer has background padding, labels are inline (D, H, M, S).
- */
 export default function CountdownBanner({ days = 7 }) {
   const target = useMemo(() => Date.now() + days * 24 * 60 * 60 * 1000, [days]);
   const [timeLeft, setTimeLeft] = useState(calcTimeLeft(target));
