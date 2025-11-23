@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import clublogo from "../assets/Club_logo_white.png";
 
 const USER_ID = "11111111-1111-1111-1111-111111111111";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
 export function Navbar() {
   const location = useLocation();
@@ -33,11 +35,14 @@ export function Navbar() {
         >
           <span className="relative z-10">Leaderboard</span>
         </Link>
+
+        <div className="ml-auto">
+          <img src={clublogo} alt="Club Logo" className="h-30 w-auto" />
+        </div>
       </header>
     </>
   );
 }
-
 
 function Bar({ percent = 0 }) {
   // clamp percent between 0 and 100 and protect NaN
@@ -53,7 +58,6 @@ function Bar({ percent = 0 }) {
     </div>
   );
 }
-
 
 export function ProgressBar({
   totalSolved = 0,
@@ -214,7 +218,6 @@ function Chevron({ open }) {
   );
 }
 
-
 async function apiStart(problemId) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/progress/start`, {
@@ -240,8 +243,6 @@ async function apiFinish(problemId) {
     console.error("finish API error:", err);
   }
 }
-
-
 
 function WeekItem({
   title,
@@ -285,7 +286,9 @@ function WeekItem({
           <div className="flex items-center justify-center w-6 h-6">
             <Chevron open={isOpen} />
           </div>
-          <span className="text-white font-bold text-lg font-dm-sans">{title}</span>
+          <span className="text-white font-bold text-lg font-dm-sans">
+            {title}
+          </span>
         </div>
 
         <div className="flex items-center gap-4">
@@ -372,7 +375,9 @@ function WeekItem({
             ))}
 
             {problems.length === 0 && (
-              <div className="px-6 py-6 text-gray-400">No problems available for this week.</div>
+              <div className="px-6 py-6 text-gray-400">
+                No problems available for this week.
+              </div>
             )}
           </div>
         </div>
@@ -380,7 +385,6 @@ function WeekItem({
     </div>
   );
 }
-
 
 function groupProblemsByWeek(problems) {
   const map = new Map();
@@ -426,8 +430,6 @@ function groupProblemsByWeek(problems) {
     checked: Array(w.problems.length).fill(false),
   }));
 }
-
-
 
 export function Week() {
   const [openIndex, setOpenIndex] = useState(null);
@@ -516,11 +518,15 @@ export function Week() {
 
       <div className="bg-black overflow-hidden">
         {loading && (
-          <div className="px-6 py-4 text-gray-400 flex font-dm-sans justify-center">Loading problems...</div>
+          <div className="px-6 py-4 text-gray-400 flex font-dm-sans justify-center">
+            Loading problems...
+          </div>
         )}
 
         {error && (
-          <div className="px-6 py-4 h-full text-red-400 text-sm font-dm-sans flex justify-center">{error}</div>
+          <div className="px-6 py-4 h-full text-red-400 text-sm font-dm-sans flex justify-center">
+            {error}
+          </div>
         )}
 
         {!loading && !error && weeksState.length === 0 && (
@@ -541,9 +547,7 @@ export function Week() {
                 count={w.problems.length}
                 problems={w.problems}
                 isOpen={openIndex === idx}
-                onToggle={() =>
-                  setOpenIndex(openIndex === idx ? null : idx)
-                }
+                onToggle={() => setOpenIndex(openIndex === idx ? null : idx)}
                 checkedCount={checkedCount}
                 checkedMap={w.checked}
                 onToggleProblem={(probIdx) => toggleProblem(idx, probIdx)}
@@ -554,4 +558,3 @@ export function Week() {
     </div>
   );
 }
-

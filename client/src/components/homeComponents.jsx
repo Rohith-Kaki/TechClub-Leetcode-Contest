@@ -12,11 +12,10 @@ export function Navbar() {
   return (
     <header className="w-full bg-[#000000] px-4 md:px-16 py-3 h-24 flex items-center justify-between">
       <div className="">
-        {/* Replace 'your-logo.svg' with the actual path to your logo image */}
         <img
           src={clublogo}
           alt="Club Logo"
-          className="h-30 w-auto text-white"
+          className="h-30 w-auto"
         />
       </div>
       <div className="font-source font-bold text-3xl text-white/90">

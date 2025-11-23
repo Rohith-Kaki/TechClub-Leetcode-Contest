@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
+import clublogo from "../assets/Club_logo_white.png";
 
 export function Rules() {
-
-
   const contestName = "";
 
   const rules = [
@@ -68,6 +67,10 @@ export function Rules() {
         >
           ← Home
         </Link>
+      </div>
+
+      <div className="fixed right-2 px-4 -top-4 z-40">
+        <img src={clublogo} alt="Club Logo" className="h-30" />
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-10">

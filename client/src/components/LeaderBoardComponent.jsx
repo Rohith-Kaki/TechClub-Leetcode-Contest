@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import clublogo from "../assets/Club_logo_white.png";
 
 export function Navbar() {
   const location = useLocation();
@@ -40,6 +41,10 @@ export function Navbar() {
         >
           <span className="relative z-10">Leaderboard</span>
         </Link>
+
+        <div className="ml-auto">
+          <img src={clublogo} alt="Club Logo" className="h-30 w-auto" />
+        </div>
       </header>
       {/* This divider line uses the purple border from your original code */}
       <div className="max-w-full border-b-2 px-6 border-gray-700"></div>
@@ -157,11 +162,12 @@ export function Leaderboard() {
                       className={
                         // Base row styling and separator
                         `border-t  border-white 
-                        ${isMe
-                            //Current User highlight
-                          ? "bg-[#673de6] text-white"
-                          : // Alternate row colors for dark theme
-                            "bg-black text-white"
+                        ${
+                          isMe
+                            ? //Current User highlight
+                              "bg-[#673de6] text-white"
+                            : // Alternate row colors for dark theme
+                              "bg-black text-white"
                         }`
                       }
                     >
@@ -178,13 +184,15 @@ export function Leaderboard() {
                           </span>
                         ) : (
                           // Default style for other ranks
-                          <span className="text-lg inline-flex items-center justify-center h-10 w-10 rounded-full bg-black text-white font-roboto">{index + 1}</span>
+                          <span className="text-lg inline-flex items-center justify-center h-10 w-10 rounded-full bg-black text-white font-roboto">
+                            {index + 1}
+                          </span>
                         )}
                       </td>
 
                       <td className="px-4 py-5 font-normal text-sm">
                         {/* updated with name instead of id */}
-                        {row.full_name} 
+                        {row.full_name}
                         {isMe && (
                           <span className="ml-3 text-sm text-white font-bold">
                             (You)
