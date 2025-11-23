@@ -356,96 +356,90 @@ function WeekItem({
 }
 
 
-/* -----------------------------------------------------------
-   Week (main) — minimal changes: compute totals and render ProgressBar
-   ----------------------------------------------------------- */
-  
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+
+function groupProblemsByWeek(problems) {
+  const map = new Map();
+
+  problems.forEach((p) => {
+    const weekNum = p.week ?? 0; // 0 for "No week" if missing
+
+    if (!map.has(weekNum)) {
+      map.set(weekNum, {
+        week: weekNum,
+        title: weekNum === 0 ? "Unassigned Week" : `Week ${weekNum}`,
+        problems: [],
+      });
+    }
+
+    // normalize difficulty: easy → Easy, medium → Medium, etc.
+    const normalizedDifficulty =
+      p.difficulty === "easy"
+        ? "Easy"
+        : p.difficulty === "medium"
+        ? "Medium"
+        : p.difficulty === "hard"
+        ? "Hard"
+        : p.difficulty;
+
+    map.get(weekNum).problems.push({
+      id: p.id,
+      title: p.title,
+      difficulty: normalizedDifficulty,
+      link: p.link,
+      position: p.position ?? 0,
+    });
+  });
+
+  // turn map into sorted array
+  const weeksArray = Array.from(map.values()).sort((a, b) => a.week - b.week);
+
+  // add count & checked[] like your old initialWeeks
+  return weeksArray.map((w) => ({
+    title: w.title,
+    count: w.problems.length,
+    problems: w.problems.sort((a, b) => a.position - b.position),
+    checked: Array(w.problems.length).fill(false),
+  }));
+}
+
+
+
 export function Week() {
   const [openIndex, setOpenIndex] = useState(null);
+  const [weeksState, setWeeksState] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const initialWeeks = [
-    {
-  title: "Week 1 : Learn the basics",
-  count: 5,
-  problems: [
-    {
-      title: "Find the row with maximum number of 1's",
-      difficulty: "Easy",
-      link: "https://leetcode.com/problems/find-the-row-with-maximum-number-of-1s/"
-    },
-    {
-      title: "Search in a 2 D matrix",
-      difficulty: "Medium",
-      link: "https://leetcode.com/problems/search-a-2d-matrix/"
-    },
-    {
-      title: "Search in a row and column wise sorted matrix",
-      difficulty: "Medium",
-      link: "https://leetcode.com/problems/search-a-2d-matrix-ii/"
-    },
-    {
-      title: "Find Peak Element (2D Matrix)",
-      difficulty: "Hard",
-      link: "https://leetcode.com/problems/find-a-peak-element-ii/"
-    },
-    {
-      title: "Matrix Median",
-      difficulty: "Hard",
-      link: "https://www.geeksforgeeks.org/find-median-row-wise-sorted-matrix/"
+  // 🔹 Fetch problems on mount and build weeksState
+  useEffect(() => {
+    async function fetchProblems() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch(`${API_BASE_URL}/api/problems`);
+        const json = await res.json();
+
+        if (!json.ok) {
+          throw new Error(json.error || "Failed to fetch problems");
+        }
+
+        const problems = json.problems || [];
+        const groupedWeeks = groupProblemsByWeek(problems);
+        setWeeksState(groupedWeeks);
+      } catch (err) {
+        console.error("fetch problems error:", err);
+        setError(err.message || "Something went wrong");
+      } finally {
+        setLoading(false);
+      }
     }
-  ]
-}
-,
-    {
-      title: "Week 2 : Learn Important Sorting Techniques",
-      count: 2,
-      problems: [
-        { title: "Sort nearly sorted array", difficulty: "Medium", link: "https://leetcode.com/problems/sort-an-array/" },
-        { title: "Count inversions", difficulty: "Medium" },
-      ],
-    },
-    {
-      title: "Week 3 : Solve Problems on Arrays [Easy → Medium → Hard]",
-      count: 2,
-      problems: [
-        { title: "Two sum variant", difficulty: "Easy" },
-        { title: "Subarray with given sum", difficulty: "Medium" },
-      ],
-    },
-    {
-      title: "Week 4 : Binary Search [1D, 2D Arrays, Search Space]",
-      count: 1,
-      problems: [
-        { title: "Search in rotated sorted array", difficulty: "Medium" },
-      ],
-    },
-    {
-      title: "Week 5 : Strings [Basic and Medium]",
-      count: 1,
-      problems: [{ title: "Longest common prefix", difficulty: "Easy" }],
-    },
-    {
-      title:
-        "Week 6 : Learn LinkedList [Single LL, Double LL, Medium, Hard Problems]",
-      count: 1,
-      problems: [{ title: "Reverse linked list", difficulty: "Easy" }],
-    },
-    {
-      title: "Week 7 : Recursion [PatternWise]",
-      count: 1,
-      problems: [
-        { title: "Print n-th fibonacci (recursion)", difficulty: "Easy" },
-      ],
-    },
-  ];
 
-  const [weeksState, setWeeksState] = useState(() =>
-    initialWeeks.map((w) => ({
-      ...w,
-      checked: Array(w.problems.length).fill(false),
-    }))
-  );
+    fetchProblems();
+  }, []);
 
+  // Checkbox toggle (still local for now)
   const toggleProblem = (weekIndex, probIndex) => {
     setWeeksState((prev) =>
       prev.map((w, wi) => {
@@ -457,7 +451,7 @@ export function Week() {
     );
   };
 
-  // ---- NEW: compute totals by difficulty and solved counts (minimal addition) ----
+  // ---- difficulty counts & totals (unchanged logic) ----
   let easyTotal = 0,
     mediumTotal = 0,
     hardTotal = 0;
@@ -481,12 +475,10 @@ export function Week() {
 
   const totalProblems = easyTotal + mediumTotal + hardTotal;
   const totalSolved = easySolved + mediumSolved + hardSolved;
-  // -------------------------------------------------------------------------------
+  // ------------------------------------------------------
 
   return (
-    <div className="max-w-full mx-auto ">
-      {/* Removed the extra top border so only the functional ProgressBar shows */}
-      {/* ProgressBar receives real-time computed totals */}
+    <div className="max-w-full mx-auto">
       <ProgressBar
         totalSolved={totalSolved}
         totalProblems={totalProblems}
@@ -499,24 +491,43 @@ export function Week() {
       />
 
       <div className="bg-black overflow-hidden">
-        {weeksState.map((w, idx) => {
-          const checkedCount = w.checked.filter(Boolean).length;
-          return (
-            <WeekItem
-              key={idx}
-              id={idx}
-              title={w.title}
-              count={w.problems.length}
-              problems={w.problems}
-              isOpen={openIndex === idx}
-              onToggle={() => setOpenIndex(openIndex === idx ? null : idx)}
-              checkedCount={checkedCount}
-              checkedMap={w.checked}
-              onToggleProblem={(probIdx) => toggleProblem(idx, probIdx)}
-            />
-          );
-        })}
+        {loading && (
+          <div className="px-6 py-4 text-gray-400 flex font-dm-sans justify-center">Loading problems...</div>
+        )}
+
+        {error && (
+          <div className="px-6 py-4 h-full text-red-400 text-sm font-dm-sans flex justify-center">{error}</div>
+        )}
+
+        {!loading && !error && weeksState.length === 0 && (
+          <div className="px-6 py-4 text-gray-400 text-lg font-bold font-dm-sans flex justify-center">
+            No problems found.
+          </div>
+        )}
+
+        {!loading &&
+          !error &&
+          weeksState.map((w, idx) => {
+            const checkedCount = w.checked.filter(Boolean).length;
+            return (
+              <WeekItem
+                key={idx}
+                id={idx}
+                title={w.title}
+                count={w.problems.length}
+                problems={w.problems}
+                isOpen={openIndex === idx}
+                onToggle={() =>
+                  setOpenIndex(openIndex === idx ? null : idx)
+                }
+                checkedCount={checkedCount}
+                checkedMap={w.checked}
+                onToggleProblem={(probIdx) => toggleProblem(idx, probIdx)}
+              />
+            );
+          })}
       </div>
     </div>
   );
 }
+
