@@ -61,7 +61,7 @@ export function Rules() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* TOP-LEFT BACK BUTTON */}
-      <div className="px-4 pt-4">
+      <div className="fixed top-2 left-2 px-4 pt-4">
         <Link
           to="/"
           className="px-4 py-2 rounded-2xl bg-black border-[#673de6] text-white text-lg font-dm-sans font-extrabold hover:bg-[#673de6]"

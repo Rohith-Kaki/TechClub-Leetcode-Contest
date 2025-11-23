@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+const USER_ID = "11111111-1111-1111-1111-111111111111";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+
 export function Navbar() {
   const location = useLocation();
   const isLeaderboard = location.pathname === "/leaderboard";
@@ -35,9 +38,7 @@ export function Navbar() {
   );
 }
 
-/* -----------------------------------------------------------
-   Small horizontal Bar (shared)
-   ----------------------------------------------------------- */
+
 function Bar({ percent = 0 }) {
   // clamp percent between 0 and 100 and protect NaN
   const p = Number.isFinite(percent)
@@ -53,10 +54,7 @@ function Bar({ percent = 0 }) {
   );
 }
 
-/* -----------------------------------------------------------
-   ProgressBar — now accepts props for dynamic values
-   minimal changes: replaced static numbers with props
-   ----------------------------------------------------------- */
+
 export function ProgressBar({
   totalSolved = 0,
   totalProblems = 0,
@@ -217,6 +215,34 @@ function Chevron({ open }) {
 }
 
 
+async function apiStart(problemId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/progress/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: USER_ID, problem_id: problemId }),
+    });
+    return await res.json();
+  } catch (err) {
+    console.error("start API error:", err);
+  }
+}
+
+async function apiFinish(problemId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/progress/finish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: USER_ID, problem_id: problemId }),
+    });
+    return await res.json();
+  } catch (err) {
+    console.error("finish API error:", err);
+  }
+}
+
+
+
 function WeekItem({
   title,
   count,
@@ -355,8 +381,6 @@ function WeekItem({
   );
 }
 
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
 function groupProblemsByWeek(problems) {
   const map = new Map();

@@ -144,7 +144,7 @@ export function Leaderboard() {
               <thead>
                 <tr className="uppercase font-roboto font-bold tracking-widest text-white">
                   <th className="px-4 py-3 text-left">Rank</th>
-                  <th className="px-4 py-3 text-left">User ID</th>
+                  <th className="px-4 py-3 text-left">Name</th>
                   <th className="px-4 py-3 text-center">Total Solved</th>
                 </tr>
               </thead>
@@ -183,7 +183,8 @@ export function Leaderboard() {
                       </td>
 
                       <td className="px-4 py-5 font-normal text-sm">
-                        {row.user_id}
+                        {/* updated with name instead of id */}
+                        {row.full_name} 
                         {isMe && (
                           <span className="ml-3 text-sm text-white font-bold">
                             (You)
