@@ -217,6 +217,7 @@ function Chevron({ open }) {
   );
 }
 
+
 function WeekItem({
   title,
   count,
@@ -250,7 +251,7 @@ function WeekItem({
     <div>
       <button
         onClick={onToggle}
-        className="w-full h-20 text-left bg-black px-12 py-4 border-b border-gray-800 flex items-center justify-between hover:bg-[#222] cursor-pointer"
+        className="w-full h-20 text-left bg-black px-12 py-4 flex items-center justify-between hover:bg-[#222] cursor-pointer"
         type="button"
         aria-expanded={isOpen}
         aria-controls={`week-content-${id}`}
@@ -259,7 +260,7 @@ function WeekItem({
           <div className="flex items-center justify-center w-6 h-6">
             <Chevron open={isOpen} />
           </div>
-          <span className="text-white font-medium">{title}</span>
+          <span className="text-white font-bold text-lg font-dm-sans">{title}</span>
         </div>
 
         <div className="flex items-center gap-4">
@@ -285,7 +286,7 @@ function WeekItem({
         aria-hidden={!isOpen}
       >
         <div ref={contentRef} className="max-w-7xl mx-auto py-4">
-          <div className="grid grid-cols-[80px_1fr_120px] items-center gap-4 px-6 py-3 bg-[#171717] border border-gray-800 text-white font-dm-sans font-medium text-sm rounded-sm">
+          <div className="grid grid-cols-[80px_1fr_120px] items-center gap-4 px-6 py-3 bg-[#1E1E1E] text-white font-dm-sans font-medium text-sm rounded-md">
             <div>Status</div>
             <div className="flex items-center gap-3">
               <span>Problem</span>
@@ -297,7 +298,7 @@ function WeekItem({
             {problems.map((p, i) => (
               <div
                 key={i}
-                className="grid grid-cols-[80px_1fr_120px] items-center gap-4 px-6 py-4 border-t border-gray-800"
+                className="grid grid-cols-[80px_1fr_120px] items-center gap-4 px-6 py-4"
               >
                 <div className="flex items-center">
                   <input
@@ -309,8 +310,21 @@ function WeekItem({
                   />
                 </div>
 
-                <div className="text-white font-md font-dm-sans">
-                  <div className="font-medium">{p.title}</div>
+                {/* CLICKABLE TITLE: opens p.link in a new tab if present */}
+                <div className="text-white font-medium font-dm-sans">
+                  {p.link ? (
+                    <a
+                      href={p.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium hover:underline text-lg"
+                    >
+                      {p.title}
+                    </a>
+                  ) : (
+                    <div className="font-medium text-lg">{p.title}</div>
+                  )}
+
                   {p.subtitle && (
                     <div className="text-xs text-white mt-1">{p.subtitle}</div>
                   )}
@@ -333,9 +347,7 @@ function WeekItem({
             ))}
 
             {problems.length === 0 && (
-              <div className="px-6 py-6 text-gray-400">
-                No problems available for this week.
-              </div>
+              <div className="px-6 py-6 text-gray-400">No problems available for this week.</div>
             )}
           </div>
         </div>
@@ -344,35 +356,52 @@ function WeekItem({
   );
 }
 
+
 /* -----------------------------------------------------------
    Week (main) — minimal changes: compute totals and render ProgressBar
    ----------------------------------------------------------- */
+  
 export function Week() {
   const [openIndex, setOpenIndex] = useState(null);
 
   const initialWeeks = [
     {
-      title: "Week 1 : Learn the basics",
-      count: 5,
-      problems: [
-        {
-          title: "Find the row with maximum number of 1's",
-          difficulty: "Easy",
-        },
-        { title: "Search in a 2 D matrix", difficulty: "Medium" },
-        {
-          title: "Search in a row and column wise sorted matrix",
-          difficulty: "Medium",
-        },
-        { title: "Find Peak Element (2D Matrix)", difficulty: "Hard" },
-        { title: "Matrix Median", difficulty: "Hard" },
-      ],
+  title: "Week 1 : Learn the basics",
+  count: 5,
+  problems: [
+    {
+      title: "Find the row with maximum number of 1's",
+      difficulty: "Easy",
+      link: "https://leetcode.com/problems/find-the-row-with-maximum-number-of-1s/"
     },
+    {
+      title: "Search in a 2 D matrix",
+      difficulty: "Medium",
+      link: "https://leetcode.com/problems/search-a-2d-matrix/"
+    },
+    {
+      title: "Search in a row and column wise sorted matrix",
+      difficulty: "Medium",
+      link: "https://leetcode.com/problems/search-a-2d-matrix-ii/"
+    },
+    {
+      title: "Find Peak Element (2D Matrix)",
+      difficulty: "Hard",
+      link: "https://leetcode.com/problems/find-a-peak-element-ii/"
+    },
+    {
+      title: "Matrix Median",
+      difficulty: "Hard",
+      link: "https://www.geeksforgeeks.org/find-median-row-wise-sorted-matrix/"
+    }
+  ]
+}
+,
     {
       title: "Week 2 : Learn Important Sorting Techniques",
       count: 2,
       problems: [
-        { title: "Sort nearly sorted array", difficulty: "Medium" },
+        { title: "Sort nearly sorted array", difficulty: "Medium", link: "https://leetcode.com/problems/sort-an-array/" },
         { title: "Count inversions", difficulty: "Medium" },
       ],
     },
