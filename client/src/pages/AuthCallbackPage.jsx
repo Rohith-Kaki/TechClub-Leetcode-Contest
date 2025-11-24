@@ -10,9 +10,9 @@ export default function AuthCallbackPage() {
     if (!loading) {
       if (user) {
         // later we can decide: /payment or /problems based on has_access
-        navigate("/problems", { replace: true });
+        navigate("/payment", { replace: true });
       } else {
-        navigate("/login", { replace: true });
+        navigate("/payment", { replace: true });
       }
     }
   }, [user, loading, navigate]);
