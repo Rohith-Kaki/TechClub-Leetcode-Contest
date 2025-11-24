@@ -364,5 +364,30 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
+
+app.get('/api/progress/solved', async(req, res) => {
+  try{
+    const {user_id} = req.query;
+
+    if(!user_id){
+      return res.status(400).json({ok:false, error:'user_id is required'});
+    }
+    const {data, error} = await supabase
+    .from('user_progress')
+    .select('problem_id, solved')
+    .eq('user_id', user_id)
+    .eq('solved', true);
+   
+    if (error){
+      console.error('Supabase Error:', error);
+      return res.status(500).json({ok:false, error:'Failed to fetch solved problems'});  
+    }
+    const solvedProblemIds = data.map((row) => row.problem_id);
+    return res.json({ok:true, solvedProblemIds});
+  } catch(err){
+    console.error('progress/solved exception', err);
+    res.status(500).json({ok:false, error:'Server error'})
+  }
+})
   
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
