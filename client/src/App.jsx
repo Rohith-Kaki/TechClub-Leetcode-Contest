@@ -11,6 +11,7 @@ import SignupPage from "./pages/SignupPage.jsx";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import UpdatePasswordPage from "./pages/UpdatePasswordPage";
 import AuthCallbackPage from './pages/AuthCallbackPage.jsx';
+import PaymentPage from "./pages/PaymentPage";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
 
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/payment" element={<PaymentPage />} />
         <Route path="/auth-callback" element={<AuthCallbackPage />} />
 
         <Route path="/leaderboard" element={<LeaderBoard />} />
