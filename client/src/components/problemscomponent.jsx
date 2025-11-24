@@ -223,7 +223,7 @@ async function apiStart(userId, problemId) {
     const res = await fetch(`${API_BASE_URL}/api/progress/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: USER_ID, problem_id: problemId }),
+      body: JSON.stringify({ user_id: userId, problem_id: problemId }),
     });
     return await res.json();
   } catch (err) {
@@ -236,7 +236,7 @@ async function apiFinish(userId, problemId) {
     const res = await fetch(`${API_BASE_URL}/api/progress/finish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: USER_ID, problem_id: problemId }),
+      body: JSON.stringify({ user_id: userId, problem_id: problemId }),
     });
     const json = await res.json();
     if (!json.ok) {
@@ -556,11 +556,11 @@ export function Week() {
 
       <div className="bg-black overflow-hidden">
         {(loading || authLoading) && (
-          <div className="px-6 py-4 text-gray-400">Loading...</div>
+          <div className="px-6 py-4 text-gray-400 text-center">Loading...</div>
         )}
 
         {!loading && !authLoading && error && (
-          <div className="px-6 py-4 text-red-400 text-sm">{error}</div>
+          <div className="px-6 py-4 text-red-400 text-sm text-center">{error}</div>
         )}
 
         {!loading &&

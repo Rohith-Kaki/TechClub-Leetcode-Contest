@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
 import clublogo from "../assets/Club_logo_white.png";
 
 export function Navbar() {
@@ -52,7 +53,6 @@ export function Navbar() {
   );
 }
 
-const USER_ID = "00000000-0000-0000-0000-000000000005";
 const API_BASE_URL = "http://localhost:4000"; //change during prod
 
 // --- LOADER COMPONENT ---
@@ -85,11 +85,19 @@ const Loader = () => (
 // --- END LOADER COMPONENT ---
 
 export function Leaderboard() {
+  const { user, loading: authLoading } = useAuth();
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setError("You must be logged in to view leaderboard.");
+      setLoading(false);
+      return;
+    }
+
     async function fetchLeaderboard() {
       try {
         setLoading(true);
@@ -120,7 +128,7 @@ export function Leaderboard() {
     }
 
     fetchLeaderboard();
-  }, []);
+  }, [authLoading, user]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -145,7 +153,7 @@ export function Leaderboard() {
         {/* Leaderboard Table */}
         {!loading && !error && leaderboard.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="min-w-full text-sm border-separate border-spacing-y-1">
               <thead>
                 <tr className="uppercase font-roboto font-bold tracking-widest text-white">
                   <th className="px-4 py-3 text-left">Rank</th>
@@ -155,26 +163,25 @@ export function Leaderboard() {
               </thead>
               <tbody>
                 {leaderboard.map((row, index) => {
-                  const isMe = row.user_id === USER_ID;
+                  const isMe = row.user_id === user.id;
                   return (
                     <tr
                       key={row.user_id}
                       className={
                         // Base row styling and separator
-                        `border-t  border-white 
+                        `rounded-2xl overflow-hidden transition-colors duration-300
                         ${
                           isMe
                             ? //Current User highlight
-                              "bg-[#673de6] text-white"
+                              "bg-[#673de6] text-white shadow-lg"
                             : // Alternate row colors for dark theme
                               "bg-black text-white"
                         }`
                       }
                     >
-                      {/* <td className={`font-roboto ${((index+1) < 4) ? " px-12 py-1 font-semibold text-xl bg-[#EC1C65] rounded-full text-white ": "px-4 py-5  text-lg"}`}>{index + 1}</td> */}
                       <td
                         className={`font-roboto ${
-                          index + 1 < 4 ? "px-4 py-5" : "px-4 py-5"
+                          index + 1 < 4 ? "px-4 py-3" : "px-4 py-3"
                         }`}
                       >
                         {index + 1 < 4 ? (
@@ -190,7 +197,7 @@ export function Leaderboard() {
                         )}
                       </td>
 
-                      <td className="px-4 py-5 font-normal text-sm">
+                      <td className="px-4 py-3 font-normal text-sm">
                         {/* updated with name instead of id */}
                         {row.full_name}
                         {isMe && (
@@ -199,7 +206,7 @@ export function Leaderboard() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-5 font-semibold text-center">
+                      <td className="px-4 py-3 font-semibold text-center">
                         {row.total_solved}
                       </td>
                     </tr>
