@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import clublogo from "../assets/Club_logo_white.png";
 
-const USER_ID = "11111111-1111-1111-1111-111111111111";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
@@ -218,7 +218,7 @@ function Chevron({ open }) {
   );
 }
 
-async function apiStart(problemId) {
+async function apiStart(userId, problemId) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/progress/start`, {
       method: "POST",
@@ -231,14 +231,18 @@ async function apiStart(problemId) {
   }
 }
 
-async function apiFinish(problemId) {
+async function apiFinish(userId, problemId) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/progress/finish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: USER_ID, problem_id: problemId }),
     });
-    return await res.json();
+    const json = await res.json();
+    if (!json.ok) {
+      console.error("finish error:", json.error);
+    }
+    return json;
   } catch (err) {
     console.error("finish API error:", err);
   }
@@ -325,7 +329,7 @@ function WeekItem({
           <div>
             {problems.map((p, i) => (
               <div
-                key={i}
+                key={p.id}
                 className="grid grid-cols-[80px_1fr_120px] items-center gap-4 px-6 py-4"
               >
                 <div className="flex items-center">
@@ -333,7 +337,12 @@ function WeekItem({
                     type="checkbox"
                     aria-label={`status-${id}-${i}`}
                     checked={!!checkedMap[i]}
-                    onChange={() => onToggleProblem(i)}
+                    // only allow checking if not already solved
+                    onChange={() => {
+                      if (!checkedMap[i]) {
+                        onToggleProblem(p, i);
+                      }
+                    }}
                     className="w-4 h-4 text-orange-500 bg-gray-900 border-gray-700 rounded focus:ring-0"
                   />
                 </div>
@@ -346,6 +355,10 @@ function WeekItem({
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium hover:underline text-lg"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (p.onClick) p.onClick();
+                      }}
                     >
                       {p.title}
                     </a>
@@ -386,11 +399,11 @@ function WeekItem({
   );
 }
 
-function groupProblemsByWeek(problems) {
+function groupProblemsByWeek(problems, solvedIds = new Set()) {
   const map = new Map();
 
   problems.forEach((p) => {
-    const weekNum = p.week ?? 0; // 0 for "No week" if missing
+    const weekNum = p.week ?? 0;
 
     if (!map.has(weekNum)) {
       map.set(weekNum, {
@@ -400,7 +413,6 @@ function groupProblemsByWeek(problems) {
       });
     }
 
-    // normalize difficulty: easy → Easy, medium → Medium, etc.
     const normalizedDifficulty =
       p.difficulty === "easy"
         ? "Easy"
@@ -419,65 +431,92 @@ function groupProblemsByWeek(problems) {
     });
   });
 
-  // turn map into sorted array
   const weeksArray = Array.from(map.values()).sort((a, b) => a.week - b.week);
 
-  // add count & checked[] like your old initialWeeks
   return weeksArray.map((w) => ({
     title: w.title,
     count: w.problems.length,
     problems: w.problems.sort((a, b) => a.position - b.position),
-    checked: Array(w.problems.length).fill(false),
+    // checked if problem id is in solvedIds
+    checked: w.problems.map((p) => solvedIds.has(p.id)),
   }));
 }
 
 export function Week() {
+  const { user, loading: authLoading } = useAuth();
   const [openIndex, setOpenIndex] = useState(null);
   const [weeksState, setWeeksState] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 🔹 Fetch problems on mount and build weeksState
+  // fetch problems + solved list
   useEffect(() => {
-    async function fetchProblems() {
+    if (authLoading) return;
+    if (!user) {
+      setError("You must be logged in to view problems.");
+      setLoading(false);
+      return;
+    }
+
+    async function fetchData() {
       try {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(`${API_BASE_URL}/api/problems`);
-        const json = await res.json();
-
-        if (!json.ok) {
-          throw new Error(json.error || "Failed to fetch problems");
+        // 1) get problems
+        const problemsRes = await fetch(`${API_BASE_URL}/api/problems`);
+        const problemsJson = await problemsRes.json();
+        if (!problemsJson.ok) {
+          throw new Error(problemsJson.error || "Failed to fetch problems");
         }
+        const problems = problemsJson.problems || [];
 
-        const problems = json.problems || [];
-        const groupedWeeks = groupProblemsByWeek(problems);
+        // 2) get solved problem ids for this user
+        const progressRes = await fetch(
+          `${API_BASE_URL}/api/progress/solved?user_id=${user.id}`
+        );
+        const progressJson = await progressRes.json();
+        if (!progressJson.ok) {
+          throw new Error(progressJson.error || "Failed to fetch progress");
+        }
+        const solvedIds = new Set(progressJson.solvedProblemIds || []);
+
+        // 3) build weeksState with checked[] based on solvedIds
+        const groupedWeeks = groupProblemsByWeek(problems, solvedIds);
         setWeeksState(groupedWeeks);
       } catch (err) {
-        console.error("fetch problems error:", err);
+        console.error("fetch problems/progress error:", err);
         setError(err.message || "Something went wrong");
       } finally {
         setLoading(false);
       }
     }
 
-    fetchProblems();
-  }, []);
+    fetchData();
+  }, [authLoading, user]);
 
-  // Checkbox toggle (still local for now)
-  const toggleProblem = (weekIndex, probIndex) => {
+  const toggleProblem = async (problem, weekIndex, probIndex) => {
+    if (!user) return;
+
+    // update UI immediately
     setWeeksState((prev) =>
       prev.map((w, wi) => {
         if (wi !== weekIndex) return w;
         const newChecked = [...w.checked];
-        newChecked[probIndex] = !newChecked[probIndex];
+        newChecked[probIndex] = true; // one-way: false -> true
         return { ...w, checked: newChecked };
       })
     );
+
+    // call finish API
+    const result = await apiFinish(user.id, problem.id);
+    if (result?.flagged) {
+      console.warn("Solve flagged as suspicious:", result);
+      // optional: show toast / warning
+    }
   };
 
-  // ---- difficulty counts & totals (unchanged logic) ----
+  // Totals for ProgressBar
   let easyTotal = 0,
     mediumTotal = 0,
     hardTotal = 0;
@@ -501,7 +540,6 @@ export function Week() {
 
   const totalProblems = easyTotal + mediumTotal + hardTotal;
   const totalSolved = easySolved + mediumSolved + hardSolved;
-  // ------------------------------------------------------
 
   return (
     <div className="max-w-full mx-auto">
@@ -517,25 +555,16 @@ export function Week() {
       />
 
       <div className="bg-black overflow-hidden">
-        {loading && (
-          <div className="px-6 py-4 text-gray-400 flex font-dm-sans justify-center">
-            Loading problems...
-          </div>
+        {(loading || authLoading) && (
+          <div className="px-6 py-4 text-gray-400">Loading...</div>
         )}
 
-        {error && (
-          <div className="px-6 py-4 h-full text-red-400 text-sm font-dm-sans flex justify-center">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && weeksState.length === 0 && (
-          <div className="px-6 py-4 text-gray-400 text-lg font-bold font-dm-sans flex justify-center">
-            No problems found.
-          </div>
+        {!loading && !authLoading && error && (
+          <div className="px-6 py-4 text-red-400 text-sm">{error}</div>
         )}
 
         {!loading &&
+          !authLoading &&
           !error &&
           weeksState.map((w, idx) => {
             const checkedCount = w.checked.filter(Boolean).length;
@@ -545,12 +574,23 @@ export function Week() {
                 id={idx}
                 title={w.title}
                 count={w.problems.length}
-                problems={w.problems}
+                problems={w.problems.map((p, i) => ({
+                  ...p,
+                  // wrap click to record start
+                  onClick: () => {
+                    if (p.link && user) {
+                      apiStart(user.id, p.id);
+                      window.open(p.link, "_blank", "noopener,noreferrer");
+                    }
+                  },
+                }))}
                 isOpen={openIndex === idx}
                 onToggle={() => setOpenIndex(openIndex === idx ? null : idx)}
                 checkedCount={checkedCount}
                 checkedMap={w.checked}
-                onToggleProblem={(probIdx) => toggleProblem(idx, probIdx)}
+                onToggleProblem={(problem, probIndex) =>
+                  toggleProblem(problem, idx, probIndex)
+                }
               />
             );
           })}
