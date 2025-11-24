@@ -55,8 +55,7 @@ export default function SignupPage() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo:
-            "http://localhost:5173/auth-callback",  // change naviagate to payments in auth-callback 
+          redirectTo: "http://localhost:5173/auth-callback", // change naviagate to payments in auth-callback
         },
       });
 
@@ -80,11 +79,7 @@ export default function SignupPage() {
         </Link>
       </div>
       <div className="fixed right-2 px-4 -top-4 z-40">
-        <img
-          src={clublogo}
-          alt="Club Logo"
-          className="h-30 w-auto"
-        />
+        <img src={clublogo} alt="Club Logo" className="h-30 w-auto" />
       </div>
       <div className="min-h-screen font-dm-sans flex items-center justify-center bg-black text-white">
         <form
@@ -152,6 +147,10 @@ export default function SignupPage() {
             <img src={googlelogo} alt="" className="w-10 h-6" />
             <span>Continue with Google</span>
           </button>
+          <p className="text-xs text-gray-400 mt-4 text-center">
+            Note: When signing up with Google, your password is managed entirely by
+            Google account recovery.
+          </p>
         </form>
       </div>
     </>

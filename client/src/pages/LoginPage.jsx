@@ -38,8 +38,7 @@ export default function LoginPage() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo:
-            "http://localhost:5173/auth-callback", // change naviagate to payments in auth-callback 
+          redirectTo: "http://localhost:5173/auth-callback", // change naviagate to payments in auth-callback
         },
       });
 
@@ -106,6 +105,10 @@ export default function LoginPage() {
 
           {error && <p className="text-red-400 text-sm">{error}</p>}
 
+          <p className="text-sm text-gray-400 mt-4 text-center">
+            Signed up with Google? Use the 'Continue with Google' button below.
+          </p>
+
           <button
             type="submit"
             disabled={loading}
@@ -113,7 +116,6 @@ export default function LoginPage() {
           >
             {loading ? "Logging in..." : "Login"}
           </button>
-
           <button
             type="button"
             onClick={handleGoogleAuth}
