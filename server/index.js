@@ -1,3 +1,5 @@
+import Razorpay from "razorpay";
+import crypto from "crypto";
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
@@ -11,7 +13,14 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 4000;
-const THRESHOLD_SECONDS  = process.env.ANTICHEAT_THRESHOLD_SECONDS || 600;
+const THRESHOLD_SECONDS  = Number(process.env.ANTICHEAT_THRESHOLD_SECONDS || 600);
+const PAYMENT_AMOUNT_PAISE = Number(process.env.PAYMENT_AMOUNT_PAISE || 19900); // 199 INR
+
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
 
 app.get("/health", (req, res) => res.json({ ok: true, "now": nowISO() }));
 
@@ -390,4 +399,208 @@ app.get('/api/progress/solved', async(req, res) => {
   }
 })
   
+
+/**
+ * Create Razorpay order
+ * Body: { user_id }
+ */
+// app.post("/api/payment/order", async (req, res) => {
+//   try {
+//     const { user_id } = req.body;
+
+//     if (!user_id) {
+//       return res
+//         .status(400)
+//         .json({ ok: false, error: "user_id is required" });
+//     }
+
+//     if (!razorpay) {
+//       return res
+//         .status(500)
+//         .json({ ok: false, error: "Razorpay not configured" });
+//     }
+
+//     const options = {
+//       amount: PAYMENT_AMOUNT_PAISE, // in paise
+//       currency: "INR",
+//       receipt: `order_rcpt_${user_id}_${Date.now()}`,
+//     };
+
+//     const order = await razorpay.orders.create(options);
+
+//     // store in payments table
+//     const { error: dbError } = await supabase.from("payments").insert([
+//       {
+//         user_id,
+//         razorpay_order_id: order.id,
+//         amount: options.amount,
+//         currency: options.currency,
+//         status: "created",
+//       },
+//     ]);
+
+//     if (dbError) {
+//       console.error("insert payments error:", dbError);
+//       return res
+//         .status(500)
+//         .json({ ok: false, error: "Failed to create payment record" });
+//     }
+
+//     return res.json({
+//       ok: true,
+//       order_id: order.id,
+//       amount: order.amount,
+//       currency: order.currency,
+//       key_id: process.env.RAZORPAY_KEY_ID,
+//     });
+//   } catch (err) {
+//     console.error("payment/order exception:", err);
+//     res.status(500).json({ ok: false, error: "Server error/order" });
+//   }
+// });
+
+
+app.post("/api/payment/order", async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "user_id is required" });
+    }
+
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error(
+        "RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET missing in .env"
+      );
+      return res
+        .status(500)
+        .json({ ok: false, error: "Razorpay not configured" });
+    }
+
+    const amount = Number(process.env.PAYMENT_AMOUNT_PAISE || 20000);
+    console.log("Creating Razorpay order for user:", user_id, "amount:", amount);
+
+    const options = {
+      amount,
+      currency: "INR",
+      receipt: `rcpt_${user_id.slice(0, 6)}_${Date.now()}`,
+    };
+
+    const order = await razorpay.orders.create(options);
+    console.log("Razorpay order created:", order);
+
+    const { error: dbError } = await supabase.from("payments").insert([
+      {
+        user_id,
+        razorpay_order_id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        status: "created",
+      },
+    ]);
+
+    if (dbError) {
+      console.error("insert payments error:", dbError);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Failed to create payment record" });
+    }
+
+    return res.json({
+      ok: true,
+      order_id: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      key_id: process.env.RAZORPAY_KEY_ID,
+    });
+  } catch (err) {
+    console.error("payment/order exception:", err);
+    res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
+
+
+/**
+ * Verify Razorpay payment
+ * Body: {
+ *   user_id,
+ *   razorpay_order_id,
+ *   razorpay_payment_id,
+ *   razorpay_signature
+ * }
+ */
+app.post("/api/payment/verify", async (req, res) => {
+  try {
+    const {
+      user_id,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    } = req.body;
+
+    if (!user_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({
+        ok: false,
+        error: "user_id, razorpay_order_id, razorpay_payment_id, razorpay_signature are required",
+      });
+    }
+
+    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
+
+    const expectedSignature = crypto
+      .createHmac("sha256", key_secret)
+      .update(body)
+      .digest("hex");
+
+    const isValid = expectedSignature === razorpay_signature;
+
+    if (!isValid) {
+      // mark payment failed
+      await supabase
+        .from("payments")
+        .update({ status: "failed" })
+        .eq("razorpay_order_id", razorpay_order_id);
+
+      return res.status(400).json({ ok: false, error: "Invalid signature" });
+    }
+
+    // 1) Update payment as 'paid'
+    const { error: payError } = await supabase
+      .from("payments")
+      .update({
+        status: "paid",
+        razorpay_payment_id,
+        paid_at: nowISO(),
+      })
+      .eq("razorpay_order_id", razorpay_order_id);
+
+    if (payError) {
+      console.error("update payments error:", payError);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Failed to update payment" });
+    }
+
+    // 2) Grant access: profiles.has_access = true
+    const { error: profError } = await supabase
+      .from("profiles")
+      .update({ has_access: true })
+      .eq("id", user_id);
+
+    if (profError) {
+      console.error("update profiles error:", profError);
+      // still return success for payment, but log error
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("payment/verify exception:", err);
+    res.status(500).json({ ok: false, error: "Server error/verify" });
+  }
+});
+
+
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
