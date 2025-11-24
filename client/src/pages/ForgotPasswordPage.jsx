@@ -10,10 +10,24 @@ export default function ForgotPasswordPage() {
     msg: null,
     err: null,
   });
+  const [inputErrors, setInputErrors] = useState({});
+
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setStatus({ loading: true, msg: null, err: null });
+    setInputErrors({});
+
+    const errors = {};
+    if (!email.trim()) errors.email = "Email is required.";
+    else if (!validateEmail(email)) errors.email = "Enter a valid email address.";
+
+    if (Object.keys(errors).length > 0) {
+      setInputErrors(errors);
+      setStatus({ loading: false, msg: null, err: null });
+      return;
+    }
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -43,7 +57,7 @@ export default function ForgotPasswordPage() {
           ← Login
         </Link>
       </div>
-      <div className="fixed right-2 px-4 -top-4 z-40">
+      <div className="fixed right-2 px-4 -top-2 z-40">
         <img src={clublogo} alt="Club Logo" className="h-30 w-aut0" />
       </div>
       <div className="min-h-screen flex items-center justify-center bg-black text-white font-dm-sans">
@@ -58,11 +72,16 @@ export default function ForgotPasswordPage() {
             <input
               type="email"
               required
-              className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md"
+              className={`w-full px-3 py-2 bg-black border rounded-md ${
+                inputErrors.email ? "border-red-500" : "border-gray-700"
+              }`}
               placeholder="your@email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+            {inputErrors.email && (
+              <p className="text-red-400 text-sm mt-1">{inputErrors.email}</p>
+            )}
 
             {status.err && <p className="text-red-400 text-sm">{status.err}</p>}
             {status.msg && (
@@ -77,6 +96,9 @@ export default function ForgotPasswordPage() {
               {status.loading ? "Sending..." : "Send Reset Link"}
             </button>
           </form>
+          <p className="text-xs text-gray-400 mt-4 text-center">
+            Note: If you signed up using Google, you manage your password on their platform. Use their account recovery process and log in with the social button.
+          </p>
         </div>
       </div>
     </>
