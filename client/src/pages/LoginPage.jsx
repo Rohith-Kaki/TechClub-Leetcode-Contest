@@ -39,7 +39,7 @@ export default function LoginPage() {
         provider: "google",
         options: {
           redirectTo:
-            "https://rrxjhwvkdmgslolemwbh.supabase.co/auth/v1/callback", // same as in Supabase
+            "http://localhost:5173/auth-callback", // change naviagate to payments in auth-callback 
         },
       });
 
