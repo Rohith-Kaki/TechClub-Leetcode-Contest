@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom"; // Import Link for user-friendly errors
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
 export default function PaymentPage() {
-  const { user, loading, hasAccess } = useAuth();
+  const { user, loading, hasAccess, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
@@ -31,17 +32,18 @@ export default function PaymentPage() {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
         <p className="mb-4 text-center">
-          You must be logged in to make a payment. Please log in or create an account.
+          You must be logged in to make a payment. Please log in or create an
+          account.
         </p>
         <div className="flex gap-4">
-          <Link 
-            to="/login" 
+          <Link
+            to="/login"
             className="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700 transition duration-300"
           >
             Login
           </Link>
-          <Link 
-            to="/signup" 
+          <Link
+            to="/signup"
             className="px-4 py-2 rounded-md bg-white text-black hover:bg-gray-200 transition duration-300"
           >
             Sign Up
@@ -59,7 +61,8 @@ export default function PaymentPage() {
         <div className="bg-[#111] p-6 rounded-xl w-full max-w-md text-center space-y-4">
           <h1 className="text-2xl font-bold mb-2">Payment Successful 🎉</h1>
           <p className="text-sm text-gray-300">
-            You now have full access to the contest. Redirecting you to problems...
+            You now have full access to the contest. Redirecting you to
+            problems...
           </p>
         </div>
       </div>
@@ -69,7 +72,7 @@ export default function PaymentPage() {
   async function handlePay() {
     try {
       setError(null);
-      setProcessing(true); // Set processing true at the start of the flow
+      setProcessing(true);
 
       const orderRes = await fetch(`${API_BASE_URL}/api/payment/order`, {
         method: "POST",
@@ -95,9 +98,7 @@ export default function PaymentPage() {
         name: "Woxsen LeetCode Contest",
         description: "Registration Fee",
         order_id,
-        prefill: {
-          email: user.email || "",
-        },
+        prefill: { email: user.email || "" },
         theme: { color: "#673de6" },
         handler: async function (response) {
           try {
@@ -116,18 +117,24 @@ export default function PaymentPage() {
             );
             const verifyJson = await verifyRes.json();
             if (!verifyJson.ok) {
-              throw new Error(verifyJson.error || "Payment verification failed");
+              throw new Error(
+                verifyJson.error || "Payment verification failed"
+              );
             }
+
+            // IMPORTANT: refresh profile so hasAccess flips to true
+            await refreshProfile();
+            // do NOT setProcessing(false) here; hasAccess will become true,
+            // which triggers the "Payment Successful" state + redirect.
           } catch (err) {
             console.error("verify payment error:", err);
             setError(err.message || "Payment verification failed");
-            setProcessing(false); // Only set false if flow fails
+            setProcessing(false);
           }
         },
         modal: {
           ondismiss: () => {
-            // Set processing false if modal is closed without completing payment
-            setProcessing(false);
+            setProcessing(false); // user closed Razorpay without paying
           },
         },
       };
@@ -137,7 +144,7 @@ export default function PaymentPage() {
     } catch (err) {
       console.error("handlePay error:", err);
       setError(err.message || "Payment failed");
-      setProcessing(false); // Only set false if flow fails
+      setProcessing(false);
     }
   }
 
@@ -151,7 +158,6 @@ export default function PaymentPage() {
         </p>
 
         {error && <p className="text-red-400 text-sm">{error}</p>}
-        
         <button
           onClick={handlePay}
           disabled={processing} // Use the processing state here
