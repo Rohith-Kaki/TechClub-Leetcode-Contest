@@ -153,7 +153,7 @@ export default function PaymentPage() {
       <div className="bg-[#111] p-6 rounded-xl w-full max-w-md text-center space-y-4">
         <h1 className="text-2xl font-bold mb-2">Complete Registration</h1>
         <p className="text-sm text-gray-400">
-          Pay <span className="font-semibold text-white">₹200</span> to unlock
+          Pay <span className="font-semibold text-white">₹199</span> to unlock
           all contest problems and the leaderboard.
         </p>
 
@@ -163,7 +163,7 @@ export default function PaymentPage() {
           disabled={processing} // Use the processing state here
           className="w-full py-2 rounded-md bg-purple-600 hover:bg-purple-700 disabled:opacity-60"
         >
-          {processing ? "Processing payment..." : "Pay ₹200 with Razorpay"}
+          {processing ? "Processing payment..." : "Pay ₹199 with Razorpay"}
         </button>
       </div>
     </div>
