@@ -68,7 +68,7 @@ export default function SignupPage() {
       }
 
       // Redirect after successful email/password signup
-      navigate("/payment");
+      navigate("/payment", { replace: true });
     } catch (err) {
       console.error("signup error:", err);
       setApiError(err.message || "Signup failed");

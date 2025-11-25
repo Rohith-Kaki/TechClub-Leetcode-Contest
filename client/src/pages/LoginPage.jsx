@@ -45,7 +45,7 @@ export default function LoginPage() {
       if (error) throw error;
 
       // Redirect after successful email/password login
-      navigate("/payment"); 
+      navigate("/problems", { replace: true }); 
 
     } catch (err) {
       console.error("login error:", err);

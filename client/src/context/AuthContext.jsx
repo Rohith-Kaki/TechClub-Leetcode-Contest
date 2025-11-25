@@ -2,76 +2,115 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 const AuthContext = createContext(null);
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);          // Supabase user
+  const [loading, setLoading] = useState(true);    // auth loading
+  const [profile, setProfile] = useState(null);    // profiles row data
+  const [loadingProfile, setLoadingProfile] = useState(false); // profile loading status
 
-  //update fullname to profiles table after sign in
-  const updateProfileName = async (user) => {
-    const userName = user.user_metadata.full_name || user.user_metadata.name;
-
-    if (userName) {
-      try {
-        // Update the 'profiles' table with the retrieved name
-        const { error } = await supabase
-          .from('profiles')
-          .update({ full_name: userName })
-          .eq('id', user.id); 
-
-        if (error) console.error("Error updating profile name:", error.message);
-        // else console.log("Profile name updated successfully for user:", user.email);
-
-      } catch (err) {
-        console.error("Profile update failed:", err);
-      }
+  // --- Helper to load profile data for a user id ---
+  async function fetchProfile(userId) {
+    if (!userId) {
+      setProfile(null);
+      return;
     }
-  };
+    setLoadingProfile(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/profile?user_id=${userId}`);
+      const json = await res.json();
+      if (json.ok && json.profile) {
+        setProfile(json.profile);
+      } else {
+        console.error("fetchProfile error:", json.error || "Profile not found");
+        setProfile(null);
+      }
+    } catch (err) {
+      console.error("fetchProfile exception:", err);
+      setProfile(null);
+    } finally {
+      setLoadingProfile(false);
+    }
+  }
+
+  // --- Helper to update the full_name in the profiles table after OAuth sign-in ---
+const updateProfileName = async (user) => {
+  const meta = user?.user_metadata || {};
+  const userName = meta.full_name || meta.name;
+
+  if (!userName) return;
+
+  try {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ full_name: userName })
+      .eq("id", user.id);
+
+    if (error) console.error("Error updating profile name:", error.message);
+  } catch (err) {
+    console.error("Profile update failed:", err);
+  }
+};
 
 
   useEffect(() => {
     let ignore = false;
 
-    async function loadUser() {
-      // Your existing loadUser logic
+    async function loadUserAndProfile() {
       const { data, error } = await supabase.auth.getUser();
-      if (!ignore) {
-        if (error) {
-          console.error("getUser error:", error);
-          setUser(null);
-        } else {
-          setUser(data?.user ?? null);
-          // Optional: You could call updateProfileName(data.user) here too 
-          // if you want to ensure it runs even on initial page load for Google users
-        }
+      if (ignore) return;
+
+      if (error || !data?.user) {
+        setUser(null);
+        setProfile(null);
         setLoading(false);
+        return;
       }
+
+      setUser(data.user);
+      setLoading(false);
+      // Fetch the profile immediately after knowing we have an auth user
+      await fetchProfile(data.user.id);
     }
 
-    loadUser();
+    loadUserAndProfile();
 
-    // The key part: listen for the SIGNED_IN event
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      
-      // Check for the specific event type that happens right after login
-      if (_event === 'SIGNED_IN' && session?.user) {
-        await updateProfileName(session.user);
+    const { data: sub } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        const u = session?.user ?? null;
+        setUser(u);
+        setProfile(null); // Clear profile until fetched
+
+        if (u) {
+          // Fetch profile after any auth state change
+          await fetchProfile(u.id);
+
+          // Update full_name in DB specifically on sign-in (for OAuth users)
+          if (_event === "SIGNED_IN") {
+            await updateProfileName(u);
+          }
+        }
       }
-    });
+    );
 
     return () => {
       ignore = true;
       sub.subscription.unsubscribe();
     };
-  }, []); // Dependecy array is empty as you had it
+  }, []); // Empty dependency array means this runs once on mount
 
+  // Combine all context values
   const value = {
     user,
-    loading,
+    loading, // auth loading
+    profile,
+    loadingProfile,
+    hasAccess: !!profile?.has_access, // Expose a derived value
     signOut: async () => {
       await supabase.auth.signOut();
       setUser(null);
+      setProfile(null);
     },
   };
 

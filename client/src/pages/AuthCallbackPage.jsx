@@ -4,22 +4,29 @@ import { useAuth } from "../context/AuthContext";
 
 export default function AuthCallbackPage() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, hasAccess, loadingProfile } = useAuth();
 
   useEffect(() => {
-    if (!loading) {
-      if (user) {
-        // later we can decide: /payment or /problems based on has_access
-        navigate("/payment", { replace: true });
-      } else {
-        navigate("/payment", { replace: true });
-      }
+    // Wait until both auth & profile status are known
+    if (loading || loadingProfile) return;
+
+    // If no user after callback → auth failed → go to login
+    if (!user) {
+      navigate("/login", { replace: true });
+      return;
     }
-  }, [user, loading, navigate]);
+
+    // If user exists, decide based on hasAccess
+    if (hasAccess) {
+      navigate("/problems", { replace: true });
+    } else {
+      navigate("/payment", { replace: true });
+    }
+  }, [user, loading, hasAccess, loadingProfile, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white">
-      <p>Finishing sign-in...</p>  
+      <p>Finishing sign-in...</p>
     </div>
   );
 }

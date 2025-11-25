@@ -1,17 +1,25 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // Import Link for user-friendly errors
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
 export default function PaymentPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading, hasAccess } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
 
-  if (authLoading) {
+  // if already paid, just go to problems
+  useEffect(() => {
+    if (loading) return;
+    if (!user) return; // let UI show "must login"
+    if (hasAccess) {
+      navigate("/problems", { replace: true });
+    }
+  }, [loading, user, hasAccess, navigate]);
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <p>Loading...</p>
@@ -21,8 +29,39 @@ export default function PaymentPage() {
 
   if (!user) {
     return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
+        <p className="mb-4 text-center">
+          You must be logged in to make a payment. Please log in or create an account.
+        </p>
+        <div className="flex gap-4">
+          <Link 
+            to="/login" 
+            className="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700 transition duration-300"
+          >
+            Login
+          </Link>
+          <Link 
+            to="/signup" 
+            className="px-4 py-2 rounded-md bg-white text-black hover:bg-gray-200 transition duration-300"
+          >
+            Sign Up
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // If hasAccess is already true (just paid or paid earlier),
+  // show a friendly "redirecting" state instead of the pay button.
+  if (hasAccess) {
+    return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p>You must be logged in to make a payment. Please log in or create an account.</p>
+        <div className="bg-[#111] p-6 rounded-xl w-full max-w-md text-center space-y-4">
+          <h1 className="text-2xl font-bold mb-2">Payment Successful 🎉</h1>
+          <p className="text-sm text-gray-300">
+            You now have full access to the contest. Redirecting you to problems...
+          </p>
+        </div>
       </div>
     );
   }
@@ -30,9 +69,8 @@ export default function PaymentPage() {
   async function handlePay() {
     try {
       setError(null);
-      setLoading(true);
+      setProcessing(true); // Set processing true at the start of the flow
 
-      // 1) Create order on backend
       const orderRes = await fetch(`${API_BASE_URL}/api/payment/order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -40,33 +78,28 @@ export default function PaymentPage() {
       });
 
       const orderJson = await orderRes.json();
-
       if (!orderJson.ok) {
         throw new Error(orderJson.error || "Failed to create order");
       }
 
       const { order_id, amount, currency, key_id } = orderJson;
 
-      // 2) Open Razorpay checkout
       if (!window.Razorpay) {
         throw new Error("Razorpay SDK not loaded");
       }
 
       const options = {
         key: key_id,
-        amount: amount,
-        currency: currency,
-        name: "Tech Club - LeetCode Contest",
+        amount,
+        currency,
+        name: "Woxsen LeetCode Contest",
         description: "Registration Fee",
-        order_id: order_id,
+        order_id,
         prefill: {
           email: user.email || "",
         },
-        theme: {
-          color: "#673de6",
-        },
+        theme: { color: "#673de6" },
         handler: async function (response) {
-          // 3) Verify payment on backend
           try {
             const verifyRes = await fetch(
               `${API_BASE_URL}/api/payment/verify`,
@@ -81,26 +114,20 @@ export default function PaymentPage() {
                 }),
               }
             );
-
             const verifyJson = await verifyRes.json();
             if (!verifyJson.ok) {
-              throw new Error(
-                verifyJson.error || "Payment verification failed"
-              );
+              throw new Error(verifyJson.error || "Payment verification failed");
             }
-
-            // Success: redirect to problems page
-            navigate("/problems", { replace: true });
           } catch (err) {
             console.error("verify payment error:", err);
             setError(err.message || "Payment verification failed");
-          } finally {
-            setLoading(false);
+            setProcessing(false); // Only set false if flow fails
           }
         },
         modal: {
           ondismiss: () => {
-            setLoading(false);
+            // Set processing false if modal is closed without completing payment
+            setProcessing(false);
           },
         },
       };
@@ -110,7 +137,7 @@ export default function PaymentPage() {
     } catch (err) {
       console.error("handlePay error:", err);
       setError(err.message || "Payment failed");
-      setLoading(false);
+      setProcessing(false); // Only set false if flow fails
     }
   }
 
@@ -119,18 +146,18 @@ export default function PaymentPage() {
       <div className="bg-[#111] p-6 rounded-xl w-full max-w-md text-center space-y-4">
         <h1 className="text-2xl font-bold mb-2">Complete Registration</h1>
         <p className="text-sm text-gray-400">
-          Pay <span className="font-semibold text-white">₹199</span> to unlock
-          all contest problems and leaderboard access.
+          Pay <span className="font-semibold text-white">₹200</span> to unlock
+          all contest problems and the leaderboard.
         </p>
 
         {error && <p className="text-red-400 text-sm">{error}</p>}
-
+        
         <button
           onClick={handlePay}
-          disabled={loading}
+          disabled={processing} // Use the processing state here
           className="w-full py-2 rounded-md bg-purple-600 hover:bg-purple-700 disabled:opacity-60"
         >
-          {loading ? "Processing..." : "Pay ₹200 with Razorpay"}
+          {processing ? "Processing payment..." : "Pay ₹200 with Razorpay"}
         </button>
       </div>
     </div>
