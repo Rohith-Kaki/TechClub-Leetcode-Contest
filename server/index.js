@@ -603,4 +603,42 @@ app.post("/api/payment/verify", async (req, res) => {
 });
 
 
+app.get("/api/profile", async (req, res) => {
+  try {
+    const { user_id } = req.query;
+
+    if (!user_id) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "user_id is required" });
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, phone, has_access")
+      .eq("id", user_id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("profile query error:", error);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Failed to fetch profile" });
+    }
+
+    if (!data) {
+      return res
+        .status(404)
+        .json({ ok: false, error: "Profile not found" });
+    }
+
+    return res.json({ ok: true, profile: data });
+  } catch (err) {
+    console.error("/api/profile exception:", err);
+    res.status(500).json({ ok: false, error: "Server error/profile" });
+  }
+});
+
+
+
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
