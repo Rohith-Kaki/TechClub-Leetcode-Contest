@@ -479,7 +479,7 @@ app.post("/api/payment/order", async (req, res) => {
         .json({ ok: false, error: "Razorpay not configured" });
     }
 
-    const amount = Number(process.env.PAYMENT_AMOUNT_PAISE || 20000);
+    const amount = Number(process.env.PAYMENT_AMOUNT_PAISE || 19900);
     console.log("Creating Razorpay order for user:", user_id, "amount:", amount);
 
     const options = {
