@@ -1,5 +1,5 @@
-// src/components/homeComponents.jsx
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import clublogo from "../assets/Club_logo_white.png";
 import backdrop from "../assets/backdrop.png";
 import arrow from "../assets/arrow.svg";
@@ -12,34 +12,37 @@ export function Navbar() {
   return (
     <header className="w-full bg-[#000000] px-4 md:px-16 py-3 h-24 flex items-center justify-between">
       <div className="">
-        {/* Replace 'your-logo.svg' with the actual path to your logo image */}
         <img
           src={clublogo}
           alt="Club Logo"
-          className="h-30 w-auto text-white"
+          className="h-30 w-auto"
         />
       </div>
       <div className="font-source font-bold text-3xl text-white/90">
         Leetcode Contest
       </div>
       <div className="flex gap-4">
-        {/* LOGIN BUTTON */}
-        <button
+        {/* SIGNUP BUTTON */}
+        <Link
+          to="/signup"
           className="h-[45px] px-4 rounded-lg font-semibold text-sm md:text-base 
                    bg-transparent text-white/90
-                   hover:bg-white hover:text-black transition-colors duration-300"
+                   hover:bg-white hover:text-black transition-colors duration-300
+                   flex items-center justify-center"
         >
-          <span className="relative z-10">Login</span>
-        </button>
+          <span className="relative z-10">Sign up</span>
+        </Link>
 
-        {/* ADMIN BUTTON */}
-        <button
-          className="h-[45px] px-4 rounded-lg bg-transparent  font-semibold text-sm md:text-base 
-                   text-white/90 
-                   hover:bg-white hover:text-black hover:border-white transition-colors duration-300"
+        {/* LOGIN BUTTON */}
+        <Link
+          to="/login"
+          className="h-[45px] px-4 rounded-lg bg-transparent font-semibold text-sm md:text-base 
+           text-white/90 
+           hover:bg-white hover:text-black hover:border-white transition-colors duration-300
+           flex items-center justify-center"
         >
-          <span className="relative z-10">Admin</span>
-        </button>
+          Login
+        </Link>
       </div>
     </header>
   );
@@ -110,22 +113,27 @@ export function HeroSection() {
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           {/* PRIMARY BUTTON: Amber Filled -> White Filled (Hover) */}
-          <button
+          <Link
+            to="/signup"
             className="btn-hover px-6 py-3 rounded-xl font-bold text-sm md:text-base 
                    bg-[#1D1E20] text-white
                    hover:bg-white hover:text-black transition-colors duration-200"
           >
-            <span className="relative z-10 font-roboto font-bold text-lg">Register Now - <span className="font-roboto font-bold text-lg">₹199</span></span>
-          </button>
+            <span className="relative z-10 font-roboto font-bold text-lg">
+              Register Now -{" "}
+              <span className="font-roboto font-bold text-lg">₹199</span>
+            </span>
+          </Link>
 
           {/* SECONDARY BUTTON: White Filled -> Transparent/Outline (Hover) */}
-          <button
+          <Link
+            to="/rules"
             className="btn-hover px-6 py-3 rounded-xl font-bold text-sm md:text-base 
                    bg-[#1D1E20] text-white
                    hover:bg-white hover:text-black transition-colors duration-200"
           >
             <span className="relative z-10">Rules</span>
-          </button>
+          </Link>
         </div>
       </div>
     </div>
@@ -326,8 +334,6 @@ export function Footer() {
           {/* Right: social icons (clickable) */}
           <div className="flex items-center gap-3">
             {/* Replace href and src values with your real social URLs and icon files */}
-            
-             
 
             <a
               href="https://www.instagram.com/techclub.woxsen/"

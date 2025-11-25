@@ -1,6 +1,10 @@
-// src/components/weekComponent.jsx
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import clublogo from "../assets/Club_logo_white.png";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
 export function Navbar() {
   const location = useLocation();
@@ -31,14 +35,15 @@ export function Navbar() {
         >
           <span className="relative z-10">Leaderboard</span>
         </Link>
+
+        <div className="ml-auto">
+          <img src={clublogo} alt="Club Logo" className="h-30 w-auto" />
+        </div>
       </header>
     </>
   );
 }
 
-/* -----------------------------------------------------------
-   Small horizontal Bar (shared)
-   ----------------------------------------------------------- */
 function Bar({ percent = 0 }) {
   // clamp percent between 0 and 100 and protect NaN
   const p = Number.isFinite(percent)
@@ -54,10 +59,6 @@ function Bar({ percent = 0 }) {
   );
 }
 
-/* -----------------------------------------------------------
-   ProgressBar — now accepts props for dynamic values
-   minimal changes: replaced static numbers with props
-   ----------------------------------------------------------- */
 export function ProgressBar({
   totalSolved = 0,
   totalProblems = 0,
@@ -217,6 +218,35 @@ function Chevron({ open }) {
   );
 }
 
+async function apiStart(userId, problemId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/progress/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId, problem_id: problemId }),
+    });
+    return await res.json();
+  } catch (err) {
+    console.error("start API error:", err);
+  }
+}
+
+async function apiFinish(userId, problemId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/progress/finish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId, problem_id: problemId }),
+    });
+    const json = await res.json();
+    if (!json.ok) {
+      console.error("finish error:", json.error);
+    }
+    return json;
+  } catch (err) {
+    console.error("finish API error:", err);
+  }
+}
 
 function WeekItem({
   title,
@@ -260,7 +290,9 @@ function WeekItem({
           <div className="flex items-center justify-center w-6 h-6">
             <Chevron open={isOpen} />
           </div>
-          <span className="text-white font-bold text-lg font-dm-sans">{title}</span>
+          <span className="text-white font-bold text-lg font-dm-sans">
+            {title}
+          </span>
         </div>
 
         <div className="flex items-center gap-4">
@@ -297,7 +329,7 @@ function WeekItem({
           <div>
             {problems.map((p, i) => (
               <div
-                key={i}
+                key={p.id}
                 className="grid grid-cols-[80px_1fr_120px] items-center gap-4 px-6 py-4"
               >
                 <div className="flex items-center">
@@ -305,7 +337,12 @@ function WeekItem({
                     type="checkbox"
                     aria-label={`status-${id}-${i}`}
                     checked={!!checkedMap[i]}
-                    onChange={() => onToggleProblem(i)}
+                    // only allow checking if not already solved
+                    onChange={() => {
+                      if (!checkedMap[i]) {
+                        onToggleProblem(p, i);
+                      }
+                    }}
                     className="w-4 h-4 text-orange-500 bg-gray-900 border-gray-700 rounded focus:ring-0"
                   />
                 </div>
@@ -318,6 +355,10 @@ function WeekItem({
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium hover:underline text-lg"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (p.onClick) p.onClick();
+                      }}
                     >
                       {p.title}
                     </a>
@@ -347,7 +388,9 @@ function WeekItem({
             ))}
 
             {problems.length === 0 && (
-              <div className="px-6 py-6 text-gray-400">No problems available for this week.</div>
+              <div className="px-6 py-6 text-gray-400">
+                No problems available for this week.
+              </div>
             )}
           </div>
         </div>
@@ -356,109 +399,124 @@ function WeekItem({
   );
 }
 
+function groupProblemsByWeek(problems, solvedIds = new Set()) {
+  const map = new Map();
 
-/* -----------------------------------------------------------
-   Week (main) — minimal changes: compute totals and render ProgressBar
-   ----------------------------------------------------------- */
-  
-export function Week() {
-  const [openIndex, setOpenIndex] = useState(null);
+  problems.forEach((p) => {
+    const weekNum = p.week ?? 0;
 
-  const initialWeeks = [
-    {
-  title: "Week 1 : Learn the basics",
-  count: 5,
-  problems: [
-    {
-      title: "Find the row with maximum number of 1's",
-      difficulty: "Easy",
-      link: "https://leetcode.com/problems/find-the-row-with-maximum-number-of-1s/"
-    },
-    {
-      title: "Search in a 2 D matrix",
-      difficulty: "Medium",
-      link: "https://leetcode.com/problems/search-a-2d-matrix/"
-    },
-    {
-      title: "Search in a row and column wise sorted matrix",
-      difficulty: "Medium",
-      link: "https://leetcode.com/problems/search-a-2d-matrix-ii/"
-    },
-    {
-      title: "Find Peak Element (2D Matrix)",
-      difficulty: "Hard",
-      link: "https://leetcode.com/problems/find-a-peak-element-ii/"
-    },
-    {
-      title: "Matrix Median",
-      difficulty: "Hard",
-      link: "https://www.geeksforgeeks.org/find-median-row-wise-sorted-matrix/"
+    if (!map.has(weekNum)) {
+      map.set(weekNum, {
+        week: weekNum,
+        title: weekNum === 0 ? "Unassigned Week" : `Week ${weekNum}`,
+        problems: [],
+      });
     }
-  ]
+
+    const normalizedDifficulty =
+      p.difficulty === "easy"
+        ? "Easy"
+        : p.difficulty === "medium"
+        ? "Medium"
+        : p.difficulty === "hard"
+        ? "Hard"
+        : p.difficulty;
+
+    map.get(weekNum).problems.push({
+      id: p.id,
+      title: p.title,
+      difficulty: normalizedDifficulty,
+      link: p.link,
+      position: p.position ?? 0,
+    });
+  });
+
+  const weeksArray = Array.from(map.values()).sort((a, b) => a.week - b.week);
+
+  return weeksArray.map((w) => ({
+    title: w.title,
+    count: w.problems.length,
+    problems: w.problems.sort((a, b) => a.position - b.position),
+    // checked if problem id is in solvedIds
+    checked: w.problems.map((p) => solvedIds.has(p.id)),
+  }));
 }
-,
-    {
-      title: "Week 2 : Learn Important Sorting Techniques",
-      count: 2,
-      problems: [
-        { title: "Sort nearly sorted array", difficulty: "Medium", link: "https://leetcode.com/problems/sort-an-array/" },
-        { title: "Count inversions", difficulty: "Medium" },
-      ],
-    },
-    {
-      title: "Week 3 : Solve Problems on Arrays [Easy → Medium → Hard]",
-      count: 2,
-      problems: [
-        { title: "Two sum variant", difficulty: "Easy" },
-        { title: "Subarray with given sum", difficulty: "Medium" },
-      ],
-    },
-    {
-      title: "Week 4 : Binary Search [1D, 2D Arrays, Search Space]",
-      count: 1,
-      problems: [
-        { title: "Search in rotated sorted array", difficulty: "Medium" },
-      ],
-    },
-    {
-      title: "Week 5 : Strings [Basic and Medium]",
-      count: 1,
-      problems: [{ title: "Longest common prefix", difficulty: "Easy" }],
-    },
-    {
-      title:
-        "Week 6 : Learn LinkedList [Single LL, Double LL, Medium, Hard Problems]",
-      count: 1,
-      problems: [{ title: "Reverse linked list", difficulty: "Easy" }],
-    },
-    {
-      title: "Week 7 : Recursion [PatternWise]",
-      count: 1,
-      problems: [
-        { title: "Print n-th fibonacci (recursion)", difficulty: "Easy" },
-      ],
-    },
-  ];
 
-  const [weeksState, setWeeksState] = useState(() =>
-    initialWeeks.map((w) => ({
-      ...w,
-      checked: Array(w.problems.length).fill(false),
-    }))
-  );
+export function Week() {
+  const { user, loading: authLoading } = useAuth();
+  const [openIndex, setOpenIndex] = useState(null);
+  const [weeksState, setWeeksState] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const toggleProblem = (weekIndex, probIndex) => {
+  // fetch problems + solved list
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setError("You must be logged in to view problems.");
+      setLoading(false);
+      return;
+    }
+
+    async function fetchData() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1) get problems
+        const problemsRes = await fetch(`${API_BASE_URL}/api/problems`);
+        const problemsJson = await problemsRes.json();
+        if (!problemsJson.ok) {
+          throw new Error(problemsJson.error || "Failed to fetch problems");
+        }
+        const problems = problemsJson.problems || [];
+
+        // 2) get solved problem ids for this user
+        const progressRes = await fetch(
+          `${API_BASE_URL}/api/progress/solved?user_id=${user.id}`
+        );
+        const progressJson = await progressRes.json();
+        if (!progressJson.ok) {
+          throw new Error(progressJson.error || "Failed to fetch progress");
+        }
+        const solvedIds = new Set(progressJson.solvedProblemIds || []);
+
+        // 3) build weeksState with checked[] based on solvedIds
+        const groupedWeeks = groupProblemsByWeek(problems, solvedIds);
+        setWeeksState(groupedWeeks);
+      } catch (err) {
+        console.error("fetch problems/progress error:", err);
+        setError(err.message || "Something went wrong");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [authLoading, user]);
+
+  const toggleProblem = async (problem, weekIndex, probIndex) => {
+    if (!user) return;
+
+    // update UI immediately
     setWeeksState((prev) =>
       prev.map((w, wi) => {
         if (wi !== weekIndex) return w;
         const newChecked = [...w.checked];
-        newChecked[probIndex] = !newChecked[probIndex];
+        newChecked[probIndex] = true; // one-way: false -> true
         return { ...w, checked: newChecked };
       })
     );
+
+    // call finish API
+    const result = await apiFinish(user.id, problem.id);
+    if (result?.flagged) {
+      console.warn("Solve flagged as suspicious:", result);
+      // optional: show toast / warning
+    }
   };
 
-  // ---- NEW: compute totals by difficulty and solved counts (minimal addition) ----
+  // Totals for ProgressBar
   let easyTotal = 0,
     mediumTotal = 0,
     hardTotal = 0;
@@ -482,12 +540,9 @@ export function Week() {
 
   const totalProblems = easyTotal + mediumTotal + hardTotal;
   const totalSolved = easySolved + mediumSolved + hardSolved;
-  // -------------------------------------------------------------------------------
 
   return (
-    <div className="max-w-full mx-auto ">
-      {/* Removed the extra top border so only the functional ProgressBar shows */}
-      {/* ProgressBar receives real-time computed totals */}
+    <div className="max-w-full mx-auto">
       <ProgressBar
         totalSolved={totalSolved}
         totalProblems={totalProblems}
@@ -500,23 +555,45 @@ export function Week() {
       />
 
       <div className="bg-black overflow-hidden">
-        {weeksState.map((w, idx) => {
-          const checkedCount = w.checked.filter(Boolean).length;
-          return (
-            <WeekItem
-              key={idx}
-              id={idx}
-              title={w.title}
-              count={w.problems.length}
-              problems={w.problems}
-              isOpen={openIndex === idx}
-              onToggle={() => setOpenIndex(openIndex === idx ? null : idx)}
-              checkedCount={checkedCount}
-              checkedMap={w.checked}
-              onToggleProblem={(probIdx) => toggleProblem(idx, probIdx)}
-            />
-          );
-        })}
+        {(loading || authLoading) && (
+          <div className="px-6 py-4 text-gray-400 text-center">Loading...</div>
+        )}
+
+        {!loading && !authLoading && error && (
+          <div className="px-6 py-4 text-red-400 text-sm text-center">{error}</div>
+        )}
+
+        {!loading &&
+          !authLoading &&
+          !error &&
+          weeksState.map((w, idx) => {
+            const checkedCount = w.checked.filter(Boolean).length;
+            return (
+              <WeekItem
+                key={idx}
+                id={idx}
+                title={w.title}
+                count={w.problems.length}
+                problems={w.problems.map((p, i) => ({
+                  ...p,
+                  // wrap click to record start
+                  onClick: () => {
+                    if (p.link && user) {
+                      apiStart(user.id, p.id);
+                      window.open(p.link, "_blank", "noopener,noreferrer");
+                    }
+                  },
+                }))}
+                isOpen={openIndex === idx}
+                onToggle={() => setOpenIndex(openIndex === idx ? null : idx)}
+                checkedCount={checkedCount}
+                checkedMap={w.checked}
+                onToggleProblem={(problem, probIndex) =>
+                  toggleProblem(problem, idx, probIndex)
+                }
+              />
+            );
+          })}
       </div>
     </div>
   );

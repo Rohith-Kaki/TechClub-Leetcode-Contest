@@ -11,6 +11,7 @@
     "test": "echo \"no tests\" && exit 0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.84.0",
     "@tailwindcss/vite": "^4.1.17",
     "lucide-react": "^0.554.0",
     "react": "^19.2.0",

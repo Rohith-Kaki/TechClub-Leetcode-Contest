@@ -1,10 +1,10 @@
-import { ProgressBar, Week, Navbar } from "../components/problemscomponent.jsx";
+import { Week, Navbar } from "../components/problemscomponent.jsx";
 
 export default function ProgressPage() {
   return(
-    <>
-    <Navbar />
-    <Week/>
-    </>
+    <div className="min-h-screen bg-black">
+      <Navbar />
+      <Week/>
+    </div>
   )
 }

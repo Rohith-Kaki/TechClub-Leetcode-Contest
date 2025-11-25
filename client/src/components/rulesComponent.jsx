@@ -1,10 +1,7 @@
-// src/pages/Rules.jsx
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import clublogo from "../assets/Club_logo_white.png";
 
 export function Rules() {
-  const navigate = useNavigate();
-
   const contestName = "";
 
   const rules = [
@@ -63,13 +60,17 @@ export function Rules() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* TOP-LEFT BACK BUTTON */}
-      <div className="px-4 pt-4">
-        <button
-          onClick={() => navigate("/")}
-          className="px-4 py-2 rounded-2xl bg-black border-[#673de6] text-slate-200 font-dm-sans hover:bg-[#673de6]"
+      <div className="fixed top-2 left-2 px-4 pt-4">
+        <Link
+          to="/"
+          className="px-4 py-2 rounded-2xl bg-black border-[#673de6] text-white text-lg font-dm-sans font-extrabold hover:bg-[#673de6]"
         >
           ← Home
-        </button>
+        </Link>
+      </div>
+
+      <div className="fixed right-2 px-4 -top-4 z-40">
+        <img src={clublogo} alt="Club Logo" className="h-30" />
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-10">
