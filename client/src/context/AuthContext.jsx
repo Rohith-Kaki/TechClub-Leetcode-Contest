@@ -107,13 +107,12 @@ export function AuthProvider({ children }) {
     profile,
     loadingProfile,
     hasAccess: !!profile?.has_access,
-    refreshProfile, // 🔥 expose this
+    refreshProfile, 
     signOut: async () => {
       await supabase.auth.signOut();
       setUser(null);
       setProfile(null);
     },
   };
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

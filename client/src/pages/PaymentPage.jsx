@@ -124,7 +124,6 @@ export default function PaymentPage() {
 
             // IMPORTANT: refresh profile so hasAccess flips to true
             await refreshProfile();
-
             // do NOT setProcessing(false) here; hasAccess will become true,
             // which triggers the "Payment Successful" state + redirect.
           } catch (err) {
