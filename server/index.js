@@ -9,20 +9,31 @@ import { supabase } from "./db.js";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "https://leetcode-contest.techclub.cloud",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      "http://localhost:5173",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 const PORT = process.env.PORT || 4000;
-const THRESHOLD_SECONDS  = Number(process.env.ANTICHEAT_THRESHOLD_SECONDS || 600);
+const THRESHOLD_SECONDS = Number(
+  process.env.ANTICHEAT_THRESHOLD_SECONDS || 600
+);
 const PAYMENT_AMOUNT_PAISE = Number(process.env.PAYMENT_AMOUNT_PAISE || 19900); // 199 INR
-
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-app.get("/health", (req, res) => res.json({ ok: true, "now": nowISO() }));
+app.get("/health", (req, res) => res.json({ ok: true, now: nowISO() }));
 
 /**
  * ADMIN: Add a problem
@@ -31,7 +42,7 @@ app.get("/health", (req, res) => res.json({ ok: true, "now": nowISO() }));
  */
 app.post("/api/admin/problems", async (req, res) => {
   try {
-    const { title, difficulty, link, week, position } = req.body;
+    const { title, difficulty, link, week, position, topicName } = req.body;
 
     if (!title || !difficulty || !link) {
       return res
@@ -48,6 +59,7 @@ app.post("/api/admin/problems", async (req, res) => {
           link,
           week: week ?? null,
           position: position ?? null,
+          topic_name: topicName ?? null,
         },
       ])
       .select()
@@ -110,27 +122,31 @@ app.get("/api/problems", async (req, res) => {
  *  - If no row exists → insert with start_ts = now
  *  - If row exists → DO NOT update start_ts, return existing start_ts
  */
-app.post('/api/progress/start', async (req, res) => {
+app.post("/api/progress/start", async (req, res) => {
   try {
     const { user_id, problem_id } = req.body;
 
     if (!user_id || !problem_id) {
-      return res.status(400).json({ ok: false, error: 'user_id and problem_id are required' });
+      return res
+        .status(400)
+        .json({ ok: false, error: "user_id and problem_id are required" });
     }
 
     const start_ts = nowISO();
 
     // Check if a progress row already exists
     const { data: existing, error: selError } = await supabase
-      .from('user_progress')
-      .select('*')
-      .eq('user_id', user_id)
-      .eq('problem_id', problem_id)
+      .from("user_progress")
+      .select("*")
+      .eq("user_id", user_id)
+      .eq("problem_id", problem_id)
       .maybeSingle();
 
     if (selError) {
-      console.error('select user_progress error:', selError);
-      return res.status(500).json({ ok: false, error: 'Failed to fetch progress' });
+      console.error("select user_progress error:", selError);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Failed to fetch progress" });
     }
 
     if (existing) {
@@ -138,37 +154,37 @@ app.post('/api/progress/start', async (req, res) => {
       return res.json({
         ok: true,
         start_ts: existing.start_ts,
-        mode: 'already_started'
+        mode: "already_started",
       });
     }
 
     // Insert only once
-    const { error: insError } = await supabase
-      .from('user_progress')
-      .insert([{
+    const { error: insError } = await supabase.from("user_progress").insert([
+      {
         user_id,
         problem_id,
         start_ts,
         solved: false,
         flagged: false,
-        flagged_at: null
-      }]);
+        flagged_at: null,
+      },
+    ]);
 
     if (insError) {
-      console.error('insert user_progress error:', insError);
-      return res.status(500).json({ ok: false, error: 'Failed to create progress' });
+      console.error("insert user_progress error:", insError);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Failed to create progress" });
     }
 
-    return res.json({ ok: true, start_ts, mode: 'time_started' });
-
+    return res.json({ ok: true, start_ts, mode: "time_started" });
   } catch (err) {
-    console.error('progress/start exception:', err);
-    res.status(500).json({ ok: false, error: 'Server error' });
+    console.error("progress/start exception:", err);
+    res.status(500).json({ ok: false, error: "Server error" });
   }
 });
 
-
-app.post('/api/progress/finish', async (req, res) => {
+app.post("/api/progress/finish", async (req, res) => {
   try {
     const { user_id, problem_id, solved = true } = req.body;
 
@@ -183,7 +199,9 @@ app.post('/api/progress/finish', async (req, res) => {
     // 1. Fetch existing progress
     const { data: existing, error: selError } = await supabase
       .from("user_progress")
-      .select("id, user_id, problem_id, start_ts, solved, flagged, flagged_at, end_ts, duration_seconds")
+      .select(
+        "id, user_id, problem_id, start_ts, solved, flagged, flagged_at, end_ts, duration_seconds"
+      )
       .eq("user_id", user_id)
       .eq("problem_id", problem_id)
       .maybeSingle();
@@ -355,50 +373,50 @@ app.post('/api/progress/finish', async (req, res) => {
   }
 });
 
+app.get("/api/leaderboard", async (req, res) => {
+  try {
+    const { data, error } = await supabase.rpc("get_leaderboard");
 
+    if (error) {
+      console.error("leaderboard query error", error);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Failed to fetch leaderboard data " });
+    }
 
-app.get('/api/leaderboard', async (req, res) => {
-    try{
-      const {data, error} = await supabase.rpc("get_leaderboard");
-
-      if(error){
-        console.error('leaderboard query error', error);
-        return res.status(500).json({ok: false, error: 'Failed to fetch leaderboard data '});
-      }
-
-      res.json({ok:true, leaderboard:data })
-    } catch (err) {
-    console.error('Query for leaderboard exception:', err);
-    res.status(500).json({ ok: false, error: 'Database error' });
+    res.json({ ok: true, leaderboard: data });
+  } catch (err) {
+    console.error("Query for leaderboard exception:", err);
+    res.status(500).json({ ok: false, error: "Database error" });
   }
 });
 
+app.get("/api/progress/solved", async (req, res) => {
+  try {
+    const { user_id } = req.query;
 
-app.get('/api/progress/solved', async(req, res) => {
-  try{
-    const {user_id} = req.query;
-
-    if(!user_id){
-      return res.status(400).json({ok:false, error:'user_id is required'});
+    if (!user_id) {
+      return res.status(400).json({ ok: false, error: "user_id is required" });
     }
-    const {data, error} = await supabase
-    .from('user_progress')
-    .select('problem_id, solved')
-    .eq('user_id', user_id)
-    .eq('solved', true);
-   
-    if (error){
-      console.error('Supabase Error:', error);
-      return res.status(500).json({ok:false, error:'Failed to fetch solved problems'});  
+    const { data, error } = await supabase
+      .from("user_progress")
+      .select("problem_id, solved")
+      .eq("user_id", user_id)
+      .eq("solved", true);
+
+    if (error) {
+      console.error("Supabase Error:", error);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Failed to fetch solved problems" });
     }
     const solvedProblemIds = data.map((row) => row.problem_id);
-    return res.json({ok:true, solvedProblemIds});
-  } catch(err){
-    console.error('progress/solved exception', err);
-    res.status(500).json({ok:false, error:'Server error'})
+    return res.json({ ok: true, solvedProblemIds });
+  } catch (err) {
+    console.error("progress/solved exception", err);
+    res.status(500).json({ ok: false, error: "Server error" });
   }
-})
-  
+});
 
 /**
  * Create Razorpay order
@@ -459,28 +477,28 @@ app.get('/api/progress/solved', async(req, res) => {
 //   }
 // });
 
-
 app.post("/api/payment/order", async (req, res) => {
   try {
     const { user_id } = req.body;
 
     if (!user_id) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "user_id is required" });
+      return res.status(400).json({ ok: false, error: "user_id is required" });
     }
 
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      console.error(
-        "RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET missing in .env"
-      );
+      console.error("RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET missing in .env");
       return res
         .status(500)
         .json({ ok: false, error: "Razorpay not configured" });
     }
 
     const amount = Number(process.env.PAYMENT_AMOUNT_PAISE || 19900);
-    console.log("Creating Razorpay order for user:", user_id, "amount:", amount);
+    console.log(
+      "Creating Razorpay order for user:",
+      user_id,
+      "amount:",
+      amount
+    );
 
     const options = {
       amount,
@@ -521,7 +539,6 @@ app.post("/api/payment/order", async (req, res) => {
   }
 });
 
-
 /**
  * Verify Razorpay payment
  * Body: {
@@ -540,10 +557,16 @@ app.post("/api/payment/verify", async (req, res) => {
       razorpay_signature,
     } = req.body;
 
-    if (!user_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    if (
+      !user_id ||
+      !razorpay_order_id ||
+      !razorpay_payment_id ||
+      !razorpay_signature
+    ) {
       return res.status(400).json({
         ok: false,
-        error: "user_id, razorpay_order_id, razorpay_payment_id, razorpay_signature are required",
+        error:
+          "user_id, razorpay_order_id, razorpay_payment_id, razorpay_signature are required",
       });
     }
 
@@ -602,15 +625,12 @@ app.post("/api/payment/verify", async (req, res) => {
   }
 });
 
-
 app.get("/api/profile", async (req, res) => {
   try {
     const { user_id } = req.query;
 
     if (!user_id) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "user_id is required" });
+      return res.status(400).json({ ok: false, error: "user_id is required" });
     }
 
     const { data, error } = await supabase
@@ -627,9 +647,7 @@ app.get("/api/profile", async (req, res) => {
     }
 
     if (!data) {
-      return res
-        .status(404)
-        .json({ ok: false, error: "Profile not found" });
+      return res.status(404).json({ ok: false, error: "Profile not found" });
     }
 
     return res.json({ ok: true, profile: data });
@@ -638,7 +656,5 @@ app.get("/api/profile", async (req, res) => {
     res.status(500).json({ ok: false, error: "Server error/profile" });
   }
 });
-
-
 
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
