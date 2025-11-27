@@ -2,7 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 const AuthContext = createContext(null);
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -107,7 +108,7 @@ export function AuthProvider({ children }) {
     profile,
     loadingProfile,
     hasAccess: !!profile?.has_access,
-    refreshProfile, 
+    refreshProfile,
     signOut: async () => {
       await supabase.auth.signOut();
       setUser(null);
