@@ -13,6 +13,8 @@ app.use(
   cors({
     origin: [
       "https://leetcode-contest.techclub.cloud",
+      "https://techclub.cloud",
+      "http://techclub.cloud",
       "http://localhost:3000",
       "http://127.0.0.1:3000",
       "http://localhost:5173",
