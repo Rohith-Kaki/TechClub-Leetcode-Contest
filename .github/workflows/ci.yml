@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          # REMOVED: cache: 'npm'  <--- This caused the error by looking in the root directory
 
       # ----------------------------------------
       #           SERVER CI STEPS
@@ -27,7 +27,7 @@ jobs:
       - name: Install Server Dependencies
         working-directory: ./server
         run: |
-          npm ci || npm install
+          npm ci || npm install # This will now run without caching dependency errors
 
       # (Optional) if you later add tests/lint for server:
       # - name: Test Server
@@ -45,6 +45,8 @@ jobs:
       - name: Build Client
         working-directory: ./client
         env:
+          # Note: Using secrets here is only necessary if your build process *must*
+          # have them. For a simple build check, they might not be needed.
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
