@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import clublogo from "../assets/Club_logo_white.png";
 
+
 export function Navbar() {
   const location = useLocation();
   // Determines if the current path is exactly '/leaderboard'
@@ -53,7 +54,8 @@ export function Navbar() {
   );
 }
 
-const API_BASE_URL = "http://localhost:4000"; //change during prod
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
 // --- LOADER COMPONENT ---
 // A simple component to show while fetching data.
