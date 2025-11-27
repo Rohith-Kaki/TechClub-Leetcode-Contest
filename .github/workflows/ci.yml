@@ -1,0 +1,51 @@
+name: CI Build Check
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    name: Build Client and Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ----------------------------------------
+      #           SERVER CI STEPS
+      # ----------------------------------------
+      - name: Install Server Dependencies
+        working-directory: ./server
+        run: |
+          npm ci || npm install
+
+      # (Optional) if you later add tests/lint for server:
+      # - name: Test Server
+      #   working-directory: ./server
+      #   run: npm test
+
+      # ----------------------------------------
+      #           CLIENT CI STEPS
+      # ----------------------------------------
+      - name: Install Client Dependencies
+        working-directory: ./client
+        run: |
+          npm ci || npm install
+
+      - name: Build Client
+        working-directory: ./client
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+        run: npm run build
