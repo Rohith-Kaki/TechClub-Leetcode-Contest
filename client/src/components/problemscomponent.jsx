@@ -406,9 +406,15 @@ function groupProblemsByWeek(problems, solvedIds = new Set()) {
     const weekNum = p.week ?? 0;
 
     if (!map.has(weekNum)) {
+      const topic = p.topic_name; 
+      let title = weekNum === 0 ? "Unassigned Week" : `Week ${weekNum}`;
+      if (topic) {
+        title += ` - ${topic}`;
+      }
+
       map.set(weekNum, {
         week: weekNum,
-        title: weekNum === 0 ? "Unassigned Week" : `Week ${weekNum}`,
+        title: title,
         problems: [],
       });
     }
