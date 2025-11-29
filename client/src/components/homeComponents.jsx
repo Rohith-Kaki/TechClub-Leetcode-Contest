@@ -141,8 +141,8 @@ export function HeroSection() {
 const ROADMAP_WEEKS = [
   { week: 1, title: "Arrays" },
   { week: 2, title: "Binary Search" },
-  { week: 3, title: "Stacks & Queues" },
-  { week: 4, title: "Trees & Graphs" },
+  { week: 3, title: "Strings" },
+  { week: 4, title: "LinkedList" },
   { week: 5, title: "Dynamic Programming" },
   { week: 6, title: "Greedy & Backtracking" },
   { week: 7, title: "Advanced Topics" },
