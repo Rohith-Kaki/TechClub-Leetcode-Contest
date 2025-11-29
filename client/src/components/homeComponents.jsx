@@ -103,8 +103,8 @@ export function HeroSection() {
         </h1>
 
         <p className="text-2xl md:text-lg font-source italic text-slate-100/90 pb-16">
-          Join the ultimate 7-week LeetCode challenge designed to prepare you
-          for tech interviews.
+          Join the ultimate 7-week LeetCode challenge, designed to prepare you
+          for tech interviews
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -361,16 +361,28 @@ export function Footer() {
           </div>
         </div>
         <div className="flex items-center justify-center gap-4">
-          <a href="https://merchant.razorpay.com/policy/RhWdDUHzt3fKFX/terms" target="_blank">
+          <a
+            href="https://merchant.razorpay.com/policy/RhWdDUHzt3fKFX/terms"
+            target="_blank"
+          >
             Terms and Conditions
           </a>
-          <a href="https://merchant.razorpay.com/policy/RhWdDUHzt3fKFX/contact_us" target="_blank">
+          <a
+            href="https://merchant.razorpay.com/policy/RhWdDUHzt3fKFX/contact_us"
+            target="_blank"
+          >
             Contact us
           </a>
-          <a href="https://merchant.razorpay.com/policy/RhWdDUHzt3fKFX/refund" target="_blank">
+          <a
+            href="https://merchant.razorpay.com/policy/RhWdDUHzt3fKFX/refund"
+            target="_blank"
+          >
             Cancellation & Refund Policy
           </a>
-          <a href="https://merchant.razorpay.com/policy/RhWdDUHzt3fKFX/privacy" target="_blank">
+          <a
+            href="https://merchant.razorpay.com/policy/RhWdDUHzt3fKFX/privacy"
+            target="_blank"
+          >
             Privacy Policy
           </a>
         </div>
