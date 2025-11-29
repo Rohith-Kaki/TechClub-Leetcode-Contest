@@ -1,63 +1,3 @@
-# name: CI Build Check
-
-# on:
-#   push:
-#     branches: [ main, master ]
-#   pull_request:
-#     branches: [ main, master ]
-
-# jobs:
-#   build:
-#     name: Build Client and Server
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
-
-#       - name: Set up Node.js 20
-#         uses: actions/setup-node@v4
-#         with:
-#           node-version: '20'
-#           # REMOVED: cache: 'npm'  <--- This caused the error by looking in the root directory
-
-#       # ----------------------------------------
-#       #           SERVER CI STEPS
-#       # ----------------------------------------
-#       - name: Install Server Dependencies
-#         working-directory: ./server
-#         run: |
-#           npm ci || npm install # This will now run without caching dependency errors
-
-#       # (Optional) if you later add tests/lint for server:
-#       # - name: Test Server
-#       #   working-directory: ./server
-#       #   run: npm test
-
-#       # ----------------------------------------
-#       #           CLIENT CI STEPS
-#       # ----------------------------------------
-#       - name: Install Client Dependencies
-#         working-directory: ./client
-#         run: |
-#           npm ci || npm install
-
-#       - name: Build Client
-#         working-directory: ./client
-#         env:
-#           # Note: Using secrets here is only necessary if your build process *must*
-#           # have them. For a simple build check, they might not be needed.
-#           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-#           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-#           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-#         run: npm run build
-
-
-
-
-
-
-
 name: CI Build Check
 
 on:
@@ -129,5 +69,5 @@ jobs:
           script: |
             cd TechClub-Leetcode-Contest/
             git pull origin main
-            docker-compose pull || true
-            docker-compose up -d --build
+            docker compose down || true
+            docker compose up -d --build
