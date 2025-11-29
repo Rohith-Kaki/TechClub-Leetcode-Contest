@@ -104,7 +104,7 @@ export function HeroSection() {
 
         <p className="text-2xl md:text-lg font-source italic text-slate-100/90 pb-16">
           Join the ultimate 7-week LeetCode challenge designed to prepare you
-          for top tech interviews.
+          for tech interviews.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
