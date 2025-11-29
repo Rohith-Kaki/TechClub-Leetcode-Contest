@@ -143,9 +143,9 @@ const ROADMAP_WEEKS = [
   { week: 2, title: "Binary Search" },
   { week: 3, title: "Strings" },
   { week: 4, title: "LinkedList" },
-  { week: 5, title: "Dynamic Programming" },
-  { week: 6, title: "Greedy & Backtracking" },
-  { week: 7, title: "Advanced Topics" },
+  { week: 5, title: "Recursion" },
+  { week: 6, title: "Stack and Queue" },
+  { week: 7, title: "Trees" },
 ];
 
 export function RoadmapSection() {
