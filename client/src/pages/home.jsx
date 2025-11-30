@@ -9,7 +9,7 @@ import {
 import React from "react";
 import CountdownBanner from "../components/CountdownBanner.jsx";
 export default function HomePage() {
-  const registrationEndDate = "2025-11-30T23:59:59+05:30";
+  const registrationEndDate = "2025-12-07T23:59:59+05:30";
   return (
     <>
       <div className="min-h-screen">
